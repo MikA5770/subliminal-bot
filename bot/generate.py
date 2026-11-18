@@ -22,7 +22,7 @@ ENGINE = ROOT / "engine" / "index.html"
 STATE = ROOT / "state.json"
 FPS = 30
 CHROME = os.environ.get("CHROME_PATH", "/usr/bin/google-chrome")
-HANDLE = os.environ.get("HANDLE", "@subliminalbounce")
+HANDLE = os.environ.get("HANDLE", "")
 # ffmpeg tout prêt fourni par le paquet imageio-ffmpeg (pas d'installation système)
 FFMPEG = os.environ.get("FFMPEG") or imageio_ffmpeg.get_ffmpeg_exe()
 
@@ -104,11 +104,10 @@ def captions(mode, ep, opts, info):
     question = m["question"]
     if mode == "war":
         question = "Which color did you pick? Comment it below"
-    caption = f"{m['series']} #{ep}: {opts['hook']}\n\n{question}\n\n" + " ".join(m["tags"])
-    title = f"{m['series']} #{ep} | {opts['hook']}"
-    if len(title) > 95:
-        title = f"{m['series']} #{ep}"
-    return caption, title + " #shorts"
+    # Les mots-clés recherchés en première ligne (référencement), puis la série et la question
+    caption = f"{m['keyword']} | {m['series']} Nº{ep}\n\n{question}\n\n" + " ".join(m["tags"])
+    title = f"{m['keyword']} | {m['series']} Nº{ep}"
+    return caption, title[:92] + " #shorts"
 
 
 def main():
@@ -133,7 +132,8 @@ def main():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(ENGINE.as_uri())
-        page.wait_for_function("document.fonts && document.fonts.check('40px \"Archivo Black\"')", timeout=20000)
+        page.evaluate("document.fonts.load('300 40px \"Montserrat\"')")
+        page.wait_for_function("document.fonts.check('300 40px \"Montserrat\"')", timeout=20000)
         seed, info = find_seed(page, mode, opts)
         hue = random.choice([0, 40, 80, 140, 200, 260]) if MODES[mode]["hue"] else 0
         stamp = time.strftime("%Y%m%d-%H%M")
