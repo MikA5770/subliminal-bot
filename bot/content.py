@@ -110,8 +110,8 @@ MODES = {
     },
     "crusher": {
         "series": "Crusher", "keyword": "Satisfying ball crusher simulation, every crushed ball duplicates",
-        "hooks": ["Every ball it crushes comes back as two", "Crush one, get two. Until there's no room left", "Guess how many fit before it's full"],
-        "question": "How many did you think would fit?",
+        "hooks": ["Lilac or pink? Every crushed ball comes back as two", "Pick a color before it's full", "Crush one, get two. Which color fills it first?"],
+        "question": "Lilac or pink, which side were you on?",
         "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 25, "max": 50,
     },
@@ -152,7 +152,7 @@ def interesting(mode, info):
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
     if mode == "crusher":
-        return 8 if info["state"] == "full" and info["n"] >= 1000 else None
+        return 8 + (1 if info["gap"] <= 40 else 0) if info["state"] == "full" and info["n"] >= 600 else None
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
