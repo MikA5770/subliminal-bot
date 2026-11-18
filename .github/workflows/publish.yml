@@ -16,7 +16,7 @@ on:
         description: "Forcer un format (vide = choix automatique)"
         type: choice
         default: ""
-        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split]
+        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, battle]
 
 permissions:
   contents: write
@@ -33,6 +33,10 @@ jobs:
       PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish == true }}
       CHROME_PATH: /usr/bin/google-chrome
       HANDLE: ""
+      # Identifiant affiché en fond de vidéo sur chaque plateforme
+      HANDLE_TIKTOK: "@subliminal239"
+      HANDLE_INSTAGRAM: "@subliminal_tv"
+      HANDLE_YOUTUBE: ""
     steps:
       - uses: actions/checkout@v6
 
@@ -62,14 +66,15 @@ jobs:
         if: env.PUBLISH == 'true'
         run: |
           FILE=$(python -c "import json;print(json.load(open('out/post.json'))['file'])")
+          FILES=$(python -c "import json;p=json.load(open('out/post.json'));print(' '.join(sorted(set(p.get('files',{}).values())|{p['file']})))")
           git config --global user.name "subliminal-bot"
           git config --global user.email "subliminal-bot@users.noreply.github.com"
           REMOTE="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           mkdir -p /tmp/media && cd /tmp/media
           if git clone -q --depth 1 --branch media "$REMOTE" repo 2>/dev/null; then cd repo; else mkdir repo && cd repo && git init -q && git remote add origin "$REMOTE"; fi
-          cp "$GITHUB_WORKSPACE/out/$FILE" .
-          # On garde seulement les 8 vidéos les plus récentes
-          ls -1t *.mp4 | tail -n +9 | xargs -r rm -f
+          for f in $FILES; do cp "$GITHUB_WORKSPACE/out/$f" .; done
+          # On garde seulement les 16 vidéos les plus récentes
+          ls -1t *.mp4 | tail -n +17 | xargs -r rm -f
           git checkout -q --orphan fresh
           git add -A && git commit -q -m "media $FILE"
           git push -q -f origin fresh:media
@@ -79,6 +84,12 @@ jobs:
             sleep 10
           done
           echo "VIDEO_URL=$URL" >> "$GITHUB_ENV"
+          BASE="https://raw.githubusercontent.com/${{ github.repository }}/media/"
+          for f in $FILES; do
+            for i in $(seq 1 30); do curl -sfI "$BASE$f" > /dev/null && break; sleep 10; done
+          done
+          URLS=$(python -c "import json,sys;p=json.load(open(sys.argv[2]));print(json.dumps({k:sys.argv[1]+v for k,v in p.get('files',{}).items()}))" "$BASE" "$GITHUB_WORKSPACE/out/post.json")
+          echo "VIDEO_URLS=$URLS" >> "$GITHUB_ENV"
 
       - name: Publier via Buffer
         if: env.PUBLISH == 'true'
@@ -89,7 +100,7 @@ jobs:
       - name: Enregistrer l'historique
         if: env.PUBLISH == 'true'
         run: |
-          git add state.json ideas.json
+          git add state.json ideas.json battles.json
           git commit -q -m "Épisode publié" || exit 0
           git pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"

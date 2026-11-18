@@ -37,7 +37,7 @@ def pick_mode(state, forced=None):
     if forced:
         return forced
     recent = state["history"][-3:]
-    choices = [m for m in MODES if m not in recent]
+    choices = [m for m in MODES if m not in recent and m != "battle"]
     # Les formats les moins publiés passent en priorité
     least = min(state["episodes"].get(m, 0) for m in choices)
     pool = [m for m in choices if state["episodes"].get(m, 0) <= least + 1]
@@ -61,6 +61,51 @@ def pick_options(mode, state):
 
 
 IDEAS = ROOT / "ideas.json"
+BATTLES = ROOT / "battles.json"
+# Identifiant affiché en fond de vidéo, différent sur chaque plateforme (vide = rien)
+HANDLES = {
+    "tiktok": os.environ.get("HANDLE_TIKTOK", "@subliminal239"),
+    "instagram": os.environ.get("HANDLE_INSTAGRAM", "@subliminal_tv"),
+    "youtube": os.environ.get("HANDLE_YOUTUBE", ""),
+}
+
+
+def load_battles():
+    return json.loads(BATTLES.read_text()) if BATTLES.exists() else []
+
+
+def due_battle(state, forced=False):
+    """Battle d'actualité à publier : de 2 jours avant l'événement jusqu'au jour J, une par jour max."""
+    today = time.strftime("%Y-%m-%d")
+    todo = sorted([b for b in load_battles() if not b.get("used")], key=lambda b: b.get("date", ""))
+    if forced:
+        return todo[0] if todo else None
+    if state.get("battle_day") == today:
+        return None
+    for b in todo:
+        d = time.mktime(time.strptime(b["date"], "%Y-%m-%d"))
+        t = time.mktime(time.strptime(today, "%Y-%m-%d"))
+        if -2 * 86400 <= t - d <= 0:
+            return b
+    return None
+
+
+def mark_battle_used(battle):
+    bs = load_battles()
+    for b in bs:
+        if b == battle:
+            b["used"] = True
+            break
+    BATTLES.write_text(json.dumps(bs, indent=2, ensure_ascii=False))
+
+
+def add_handle(page, src, handle, dst):
+    png = dst.with_suffix(".png")
+    png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
+    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-i", str(png), "-filter_complex", "[0][1]overlay",
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy",
+                    "-movflags", "+faststart", str(dst)], check=True)
+    png.unlink()
 
 
 def take_idea(mode):
@@ -148,12 +193,22 @@ def main():
     state = load_state()
     pending = [it for it in (json.loads(IDEAS.read_text()) if IDEAS.exists() else [])
                if not it.get("used") and it.get("mode") in MODES and it.get("by")]
-    forced = a.mode or next((it["mode"] for it in pending if it["mode"] not in state["history"][-1:]), None)
+    battle = None if a.mode and a.mode != "battle" else due_battle(state, forced=a.mode == "battle")
+    forced = a.mode or ("battle" if battle else None) or next((it["mode"] for it in pending if it["mode"] not in state["history"][-1:]), None)
     mode = pick_mode(state, forced)
     opts = pick_options(mode, state)
+    override = None
+    if mode == "battle" and battle:
+        names = [f["name"] for f in battle["fighters"]]
+        opts["battle"] = {"title": battle.get("title", ""), "fighters": battle["fighters"]}
+        opts["hook"] = battle.get("hook") or f"{' vs '.join(names)}. Pick a side before it starts"
+        opts["cta"] = random.choice(["Who were you rooting for?", "Rematch? Comment below", "Was it fair? Comment"])
+        override = {"keyword": battle.get("keyword") or f"{' vs '.join(names)} ball battle simulation",
+                    "question": battle.get("question", "Who were you rooting for?"),
+                    "tags": battle.get("tags", [])}
     ep = state["episodes"].get(mode, 0) + 1
     opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep)})
-    idea = take_idea(mode)
+    idea = None if mode == "battle" else take_idea(mode)
     if idea:
         opts["credit"] = f"Idea by {idea['by']}"
         if idea.get("hook"):
@@ -168,11 +223,19 @@ def main():
         page.goto(ENGINE.as_uri())
         page.evaluate("document.fonts.load('300 40px \"Montserrat\"')")
         page.wait_for_function("document.fonts.check('300 40px \"Montserrat\"')", timeout=20000)
-        seed, info = find_seed(page, mode, opts)
+        seed, info = find_seed(page, mode, opts, tries=3 if mode == "overflow" else 40)
         hue = random.choice([0, 40, 80, 140, 200, 260]) if MODES[mode]["hue"] else 0
         stamp = time.strftime("%Y%m%d-%H%M")
         mp4 = out / f"subliminal_{stamp}_{mode}_{ep}.mp4"
         dur = render(page, mode, seed, opts, mp4, hue)
+        files = {}
+        for plat, h in HANDLES.items():
+            if h:
+                dst = mp4.with_name(f"{mp4.stem}_{plat}.mp4")
+                add_handle(page, mp4, h, dst)
+                files[plat] = dst.name
+            else:
+                files[plat] = mp4.name
         browser.close()
         if errors:
             raise RuntimeError("Erreurs dans le moteur : " + "; ".join(errors))
@@ -180,7 +243,7 @@ def main():
     caption, title = captions(mode, ep, opts, info)
     post = {"mode": mode, "episode": ep, "seed": seed, "options": opts, "hue": hue, "duration": round(dur, 1),
             "result": info, "file": mp4.name, "caption": caption, "title": title,
-            "captions": platform_captions(mode, ep, opts["hook"])}
+            "files": files, "captions": platform_captions(mode, ep, opts["hook"], override)}
     if idea:
         for k in post["captions"]:
             post["captions"][k] = post["captions"][k].replace("\n\n", f"\n\nIdea by {idea['by']} 💜 Drop yours in the comments.\n\n", 1)
@@ -189,6 +252,9 @@ def main():
     if not a.no_state:
         if idea:
             mark_idea_used(idea)
+        if mode == "battle" and battle:
+            mark_battle_used(battle)
+            state["battle_day"] = time.strftime("%Y-%m-%d")
         state["history"] = (state["history"] + [mode])[-30:]
         state["episodes"][mode] = ep
         if mode == "reveal":

@@ -86,12 +86,13 @@ CREATE = """mutation($input: CreatePostInput!) {
 def main():
     post = json.loads((ROOT / "out" / "post.json").read_text())
     url = os.environ["VIDEO_URL"]
+    urls = json.loads(os.environ.get("VIDEO_URLS") or "{}")
     dry = os.environ.get("DRY_RUN") == "1"
     due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     if dry and not os.environ.get("BUFFER_API_KEY"):
         for s in SERVICES:
-            print(f"[TEST sans clé] {s}:", json.dumps(build_input(s, "CHANNEL_ID", post, url, due), ensure_ascii=False))
+            print(f"[TEST sans clé] {s}:", json.dumps(build_input(s, "CHANNEL_ID", post, urls.get(s, url), due), ensure_ascii=False))
         return
 
     orgs = gql("query{account{organizations{id name}}}")["account"]["organizations"]
@@ -109,7 +110,7 @@ def main():
 
     failures = 0
     for s, c in targets.items():
-        inp = build_input(s, c["id"], post, url, due)
+        inp = build_input(s, c["id"], post, urls.get(s, url), due)
         if dry:
             print(f"[TEST] {s} ({c['name']}):", json.dumps(inp, ensure_ascii=False))
             continue

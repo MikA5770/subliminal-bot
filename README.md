@@ -44,4 +44,14 @@ Quand un abonné propose une idée en commentaire, ajoute-la dans `ideas.json` :
 ```
 La prochaine vidéo prend ce format, affiche « IDEA BY @PSEUDO » sous l'accroche et le crédite dans la légende. L'idée est ensuite marquée `"used": true`.
 
-Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split.
+Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, battle.
+
+## Battles d'actualité (`battles.json`)
+Ajoute une affiche avec sa date ; le robot la publie entre 2 jours avant et le jour J (une battle par jour maximum) :
+```json
+{"date": "2026-12-12", "title": "UFC 335", "tags": ["#ufc335"], "fighters": [{"name": "Oliveira"}, {"name": "Lopes"}]}
+```
+Champs facultatifs : `hook`, `keyword`, `question`, `color` par combattant. Noms seulement : pas de photos ni de logos.
+
+## Identifiant en fond de vidéo
+Dans `.github/workflows/publish.yml` : `HANDLE_TIKTOK`, `HANDLE_INSTAGRAM`, `HANDLE_YOUTUBE` (vide = pas d'identifiant).

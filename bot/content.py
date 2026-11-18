@@ -101,6 +101,20 @@ MODES = {
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 14, "max": 40,
     },
+    "overflow": {
+        "series": "Overflow", "keyword": "1 ball becomes 500,000 balls satisfying simulation",
+        "hooks": ["1 ball. It doubles every bounce. Watch the counter", "From 1 ball to half a million", "Guess the final number before it breaks"],
+        "question": "What number did you guess?",
+        "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 20, "max": 50,
+    },
+    "battle": {
+        "series": "Battle", "keyword": "Ball battle simulation",
+        "hooks": ["Pick a side before it starts"],
+        "question": "Who were you rooting for?",
+        "tags": ["#satisfying", "#ballbattle", "#whowins", "#simulation"],
+        "hue": False, "min": 16, "max": 50,
+    },
     "piano": {
         "series": "Echo", "keyword": "Satisfying ball plays a song",
         "hooks": ["Listen closely", "Every touch is a note. Name it", "You know this song"],
@@ -128,6 +142,11 @@ def interesting(mode, info):
         gap = c[0] - c[1]
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
+    if mode == "overflow":
+        return 8 if info["state"] == "break" else None
+    if mode == "battle":
+        # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires)
+        return 10 - info["hp"] / 10 if info["state"] == "win" else None
     if mode in ("pendulum", "bricks", "split"):
         if info["state"] not in ("done", "clear"):
             return None
@@ -157,6 +176,8 @@ MODE_TAGS = {
     "pendulum": ["#doublependulum", "#pendulum", "#chaos", "#physics", "#guessthenumber"],
     "bricks": ["#brickbreaker", "#bouncingball", "#breakout", "#ballescape", "#walls"],
     "split": ["#physics", "#breaking", "#guessthenumber", "#simulation", "#fractal"],
+    "overflow": ["#ballmultiply", "#exponential", "#1ball", "#chaos", "#guessthenumber"],
+    "battle": ["#ballbattle", "#whowins", "#pickaside", "#battle", "#simulation"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
 }
 
@@ -180,14 +201,16 @@ def _tags(mode, n_core, n_mode, n_gen):
     return (_r.sample(CORE_TAGS, n_core) + _r.sample(MODE_TAGS[mode], n_mode) + _r.sample(GENERAL_TAGS, n_gen))
 
 
-def platform_captions(mode, ep, hook):
-    m = MODES[mode]
+def platform_captions(mode, ep, hook, override=None):
+    m = dict(MODES[mode], **(override or {}))
     ctx = {"keyword": m["keyword"], "keyword_lc": m["keyword"].lower(), "series": m["series"], "ep": ep,
            "question": m["question"], "hook_lc": hook.rstrip(".").lower()}
-    tiktok = _r.choice(TIKTOK_TEMPLATES).format(**ctx) + "\n\n" + " ".join(_tags(mode, 1, 2, 1))
-    insta = _r.choice(INSTAGRAM_TEMPLATES).format(**ctx) + "\n\n" + " ".join(_tags(mode, 2, 2, 1))
-    yt_tags = ["#shorts"] + _r.sample(MODE_TAGS[mode], 1) + _r.sample(CORE_TAGS, 1)
-    youtube = _r.choice(YOUTUBE_TEMPLATES).format(**ctx) + "\n\n" + " ".join(yt_tags)
+    extra = (override or {}).get("tags", [])
+    note = "\n\nSimulation, not a prediction." if mode == "battle" else ""
+    tiktok = _r.choice(TIKTOK_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(extra[:2] + _tags(mode, 1, 2, 1))
+    insta = _r.choice(INSTAGRAM_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(extra[:2] + _tags(mode, 2, 2, 1))
+    yt_tags = ["#shorts"] + extra[:1] + _r.sample(MODE_TAGS[mode], 1) + _r.sample(CORE_TAGS, 1)
+    youtube = _r.choice(YOUTUBE_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(yt_tags)
     return {"tiktok": tiktok, "instagram": insta, "youtube": youtube}
 
 
