@@ -4,7 +4,8 @@ Pour ajouter une accroche ou un mot secret, il suffit de compléter les listes.
 """
 
 INSTRUMENTS = ["musicbox", "marimba", "glass", "kalimba"]
-MELODIES = ["run", "elise", "ode", "twinkle", "canon"]
+MELODIES = ["run", "elise", "ode", "twinkle", "canon", "jingle", "frere", "mary", "greensleeves",
+            "nachtmusik", "turkish", "lullaby", "minuet", "morning", "london", "auld"]
 SONG_NAMES = {"elise": "Für Elise", "ode": "Ode to Joy", "twinkle": "Twinkle Twinkle", "canon": "Canon in D"}
 
 SECRET_WORDS = [
@@ -77,7 +78,7 @@ MODES = {
         "hooks": ["One ball. Every pane is a note", "It breaks every single one", "Each pane was placed before it fell"],
         "question": "Did you hear the song?",
         "tags": ["#satisfying", "#glassbreaking", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 22, "max": 45,
+        "hue": False, "min": 20, "max": 45,
     },
     "piano": {
         "series": "Echo", "keyword": "Satisfying ball plays a song",
@@ -108,7 +109,7 @@ def interesting(mode, info):
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "glass":
         # Assez de vitres pour que la vidéo soit impressionnante
-        return 5 + info["n"] / 20 if info["n"] >= 40 and info["state"] == "done" else None
+        return 5 + info["n"] / 20 if info["n"] >= 30 and info["state"] == "done" else None
     return 5
 
 

@@ -51,7 +51,7 @@ def pick_options(mode, state):
         opts["mel"] = random.choice([x for x in MELODIES if x != "run"])
     if mode == "glass":
         opts["inst"] = random.choice(["glass", "musicbox", "kalimba"])
-        opts["mel"] = random.choice(["elise", "ode", "twinkle"])
+        opts["mel"] = random.choice([x for x in MELODIES if x not in ("run", "canon")])
     else:
         opts["mel"] = random.choice(MELODIES)
     if mode == "reveal":

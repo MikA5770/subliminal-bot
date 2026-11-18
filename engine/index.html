@@ -76,8 +76,36 @@ const MEL={
   elise:[76,75,76,75,76,71,74,72,69,60,64,69,71,64,68,71,72,64,76,75,76,75,76,71,74,72,69,60,64,69,71,64,72,71,69],
   ode:[76,76,77,79,79,77,76,74,72,72,74,76,76,74,74,76,76,77,79,79,77,76,74,72,72,74,76,74,72,72],
   twinkle:[72,72,79,79,81,81,79,77,77,76,76,74,74,72,79,79,77,77,76,76,74,79,79,77,77,76,76,74],
-  canon:[78,76,74,73,71,69,71,73,74,73,71,69,67,66,67,64]
+  canon:[78,76,74,73,71,69,71,73,74,73,71,69,67,66,67,64],
+  jingle:[76,76,76,76,76,76,76,79,72,74,76,77,77,77,77,77,76,76,76,76,76,74,74,76,74,79],
+  frere:[72,74,76,72,72,74,76,72,76,77,79,76,77,79,79,81,79,77,76,72,79,81,79,77,76,72,72,67,72,72,67,72],
+  mary:[76,74,72,74,76,76,76,74,74,74,76,79,79,76,74,72,74,76,76,76,76,74,74,76,74,72],
+  greensleeves:[69,72,74,76,77,76,74,71,67,69,71,72,69,69,68,69,71,68,64,69,72,74,76,77,76,74,71,67,69,71,72,71,69,68,66,68,69],
+  nachtmusik:[79,74,79,74,79,74,79,83,86,84,81,84,81,84,81,78,81,74],
+  turkish:[71,69,68,69,72,74,72,71,72,76,77,76,75,76,83,81,80,81,83,81,80,81,84],
+  lullaby:[76,76,79,76,76,79,76,79,84,83,81,81,79,74,76,77,74,74,76,77,74,77,83,81,79,83,84],
+  minuet:[74,67,69,71,72,74,67,67,76,72,74,76,78,79,67,67,72,74,72,71,69,71,72,71,69,67,66,67,69,71,67,69],
+  morning:[79,76,74,72,74,76,79,76,74,72,74,76,74,76,79,76,79,81,76,81,79,76,74,72],
+  london:[79,81,79,77,76,77,79,74,76,77,76,77,79,79,81,79,77,76,77,79,74,79,76,72],
+  auld:[72,77,77,77,81,79,77,79,81,77,77,81,84,86,86,84,81,81,77,79,77,79,81,77,74,74,72,77]
 };
+// Rythme de chaque mélodie (durées relatives) et durée d'une unité en secondes pour le format Glass
+const RHY={elise:[1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,4],
+  ode:[1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2,1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2],
+  twinkle:[1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2],
+  canon:[2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,2],
+  jingle:[1,1,2,1,1,2,1,1,1.5,.5,4,1,1,1.5,.5,1,1,1,.5,.5,1,1,1,1,2,2],
+  frere:[1,1,1,1,1,1,1,1,1,1,2,1,1,2,.5,.5,.5,.5,1,1,.5,.5,.5,.5,1,1,1,1,2,1,1,2],
+  mary:[1,1,1,1,1,1,2,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,4],
+  greensleeves:[2,4,2,3,1,2,4,2,3,1,2,4,2,3,1,2,4,2,4,2,4,2,3,1,2,4,2,3,1,2,3,1,2,3,1,2,6],
+  nachtmusik:[2,1,2,1,1,1,1,1,4,2,1,2,1,1,1,1,1,4],
+  turkish:[.5,.5,.5,.5,2,.5,.5,.5,.5,2,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,.5,2],
+  lullaby:[.5,.5,2,.5,.5,2,.5,.5,1,1.5,.5,1,1,.5,.5,1,1,.5,.5,2,.5,.5,.5,.5,1,1,3],
+  minuet:[1,.5,.5,.5,.5,1,1,1,1,.5,.5,.5,.5,1,1,1,1,.5,.5,.5,.5,1,.5,.5,.5,.5,1,.5,.5,.5,.5,3],
+  morning:[1,1,1,1,1,1,1,1,1,1,.5,.5,.5,.5,1,1,1,1,1,1,1,1,1,3],
+  london:[1.5,.5,1,1,1,1,2,1,1,2,1,1,2,1.5,.5,1,1,1,1,2,2,2,1,3],
+  auld:[1,1.5,.5,1,1,1.5,.5,1,.5,.5,1.5,.5,1,3,1,1.5,.5,1,1,1.5,.5,1,1,1.5,.5,1,1,3]};
+const UNIT={elise:.3,ode:.45,twinkle:.42,canon:.36,run:.36,jingle:.36,frere:.4,mary:.38,greensleeves:.2,nachtmusik:.3,turkish:.5,lullaby:.42,minuet:.42,morning:.4,london:.38,auld:.4};
 let instName='musicbox',melName='run',soundOn=true,noteI=0;
 function nextNote(){const i=noteI++;if(melName==='run'){const L=PENTA.length,p=i%(2*L-2);return PENTA[p<L?p:2*L-2-p];}const m=MEL[melName];return m[i%m.length];}
 
@@ -402,8 +430,8 @@ sims.flags={name:'8 · Last flag standing',hook:'Comment your country! The last 
 };
 
 const NN=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-const SONG={run:'THE SCALE',elise:'FÜR ELISE',ode:'ODE TO JOY',twinkle:'TWINKLE TWINKLE',canon:'CANON IN D'};
-const BY={run:'',elise:'Beethoven',ode:'Beethoven',twinkle:'Mozart variations',canon:'Pachelbel'};
+const SONG={run:'THE SCALE',elise:'FÜR ELISE',ode:'ODE TO JOY',twinkle:'TWINKLE TWINKLE',canon:'CANON IN D',jingle:'JINGLE BELLS',frere:'FRÈRE JACQUES',mary:'MARY HAD A LITTLE LAMB',greensleeves:'GREENSLEEVES',nachtmusik:'EINE KLEINE NACHTMUSIK',turkish:'TURKISH MARCH',lullaby:'LULLABY',minuet:'MINUET IN G',morning:'MORNING MOOD',london:'LONDON BRIDGE',auld:'AULD LANG SYNE'};
+const BY={run:'',elise:'Beethoven',ode:'Beethoven',twinkle:'Mozart variations',canon:'Pachelbel',jingle:'J. Pierpont',frere:'Traditional',mary:'Traditional',greensleeves:'Traditional',nachtmusik:'Mozart',turkish:'Mozart',lullaby:'Brahms',minuet:'Petzold',morning:'Grieg',london:'Traditional',auld:'Traditional'};
 let lastNote=60;
 sims.piano={name:'9 · Name the song',hook:'Every bounce plays the next note. Name the song!',inst:'musicbox',mel:'elise',
   init(){this.R=450;this.N=12;this.lit=new Array(12).fill(0);this.b={x:CX,y:CY-120,vx:rnd(-550,550),vy:0,r:22};this.played=0;
@@ -430,15 +458,11 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
   init(){
     const G=2300,R=18,TH=16,PL=112,WALL=440;
     this.G=G;this.R=R;this.TH=TH;this.PL=PL;this.WALL=WALL;
-    // Rythme réel de chaque mélodie (en unités), joué deux fois
-    const RHY={elise:[1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,4],
-      ode:[1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2,1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2],
-      twinkle:[1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2],
-      canon:[2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,2]};
-    const UNIT={elise:.3,ode:.45,twinkle:.42,canon:.36,run:.36};
+    // Rythme réel de la mélodie, jouée deux fois
     let rh=RHY[melName];if(!rh){rh=[];for(let i=0;i<30;i++)rh.push([1,1,2,1,1,3][i%6]);}
-    const durs=rh.concat(rh).map(d=>d*(UNIT[melName]||.3));
-    const N=Math.min(72,durs.length);this.N=N;
+    const u=UNIT[melName]||.3,durs=[];let tot=0;
+    while(durs.length<80&&(durs.length<rh.length*2||tot<24)){const d=rh[durs.length%rh.length]*u;durs.push(d);tot+=d;}
+    const N=durs.length;this.N=N;
     const t0=.5;const times=[t0];for(let i=1;i<N;i++)times.push(times[i-1]+durs[i-1]);
     const segs=[{t:0,p:{x:rnd(-150,150),y:-.5*G*t0*t0},v:{x:rnd(-120,120),y:0}}];const panes=[];
     const posAt=(s,t)=>({x:s.p.x+s.v.x*(t-s.t),y:s.p.y+s.v.y*(t-s.t)+.5*G*(t-s.t)**2});
@@ -454,12 +478,12 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
         // vrai rebond : on choisit l'inclinaison de la vitre, la physique fait le reste
         const sv=Math.hypot(vin.x,vin.y)||1,ba=Math.atan2(-vin.y/sv,-vin.x/sv)+rnd(-1.1,1.1),n={x:Math.cos(ba),y:Math.sin(ba)};if(n.y>.3)continue;
         const vn=vin.x*n.x+vin.y*n.y;if(vn>-120)continue;
-        const e=rnd(.8,.95),vout={x:vin.x-(1+e)*vn*n.x,y:vin.y-(1+e)*vn*n.y};
+        const e=rnd(.3,.93),vout={x:vin.x-(1+e)*vn*n.x,y:vin.y-(1+e)*vn*n.y};
         const nx=pk.x+vout.x*T,ny=pk.y+vout.y*T+.5*G*T*T,dy=ny-pk.y;
         // la balle doit retomber sur la vitre suivante (pas la toucher en montant)
         const arr=vout.y+G*T;
         if(Math.abs(vout.x)>700)continue;
-        if(k+1<N&&(dy<-260||dy>520))continue;
+        if(k+1<N&&(dy<-260||dy>420+900*T*T))continue;
         let ok=true;for(let i=1;i<=10;i++){const tt=T*i/10;if(Math.abs(pk.x+vout.x*tt)>WALL-R){ok=false;break;}}
         if(!ok&&k+1<N)continue;
         if(k+1<N){if(Math.hypot(nx-pk.x,ny-pk.y)<55)continue;for(const o of panes)if(Math.hypot(o.c.x-nx,o.c.y-ny)<PL*.8){ok=false;break;}if(!ok)continue;}
