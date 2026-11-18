@@ -1,9 +1,11 @@
 {
   "history": [
-    "multiply"
+    "multiply",
+    "grow"
   ],
   "episodes": {
-    "multiply": 1
+    "multiply": 1,
+    "grow": 1
   },
   "words": []
 }
