@@ -66,7 +66,7 @@ BATTLES = ROOT / "battles.json"
 HANDLES = {
     "tiktok": os.environ.get("HANDLE_TIKTOK", "@subliminal239"),
     "instagram": os.environ.get("HANDLE_INSTAGRAM", "@subliminal_tv"),
-    "youtube": os.environ.get("HANDLE_YOUTUBE", ""),
+    "youtube": os.environ.get("HANDLE_YOUTUBE", "@Subliminal_TVi"),
 }
 
 
@@ -223,7 +223,7 @@ def main():
         page.goto(ENGINE.as_uri())
         page.evaluate("document.fonts.load('300 40px \"Montserrat\"')")
         page.wait_for_function("document.fonts.check('300 40px \"Montserrat\"')", timeout=20000)
-        seed, info = find_seed(page, mode, opts, tries=3 if mode == "overflow" else 40)
+        seed, info = find_seed(page, mode, opts, tries=8 if mode == "overflow" else 40)
         hue = random.choice([0, 40, 80, 140, 200, 260]) if MODES[mode]["hue"] else 0
         stamp = time.strftime("%Y%m%d-%H%M")
         mp4 = out / f"subliminal_{stamp}_{mode}_{ep}.mp4"

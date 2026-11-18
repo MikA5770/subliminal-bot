@@ -36,7 +36,7 @@ jobs:
       # Identifiant affiché en fond de vidéo sur chaque plateforme
       HANDLE_TIKTOK: "@subliminal239"
       HANDLE_INSTAGRAM: "@subliminal_tv"
-      HANDLE_YOUTUBE: ""
+      HANDLE_YOUTUBE: "@Subliminal_TVi"
     steps:
       - uses: actions/checkout@v6
 

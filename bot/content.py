@@ -90,30 +90,30 @@ MODES = {
     "bricks": {
         "series": "Walls", "keyword": "Satisfying ball breaks every brick wall",
         "hooks": ["One bounce. One brick. Until the walls are gone", "60 bricks. One ball. No way out", "Watch the box disappear"],
-        "question": "At what number did you think it would escape?",
+        "question": "Which brick did you think would be the last?",
         "tags": ["#satisfying", "#brickbreaker", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 20, "max": 48,
+        "hue": False, "min": 25, "max": 58,
     },
     "split": {
         "series": "Splinter", "keyword": "Satisfying bar snaps into thousands of pieces",
         "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
         "question": "How many pieces did you guess?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 14, "max": 40,
+        "hue": False, "min": 22, "max": 50,
     },
     "overflow": {
         "series": "Overflow", "keyword": "1 ball becomes 500,000 balls satisfying simulation",
         "hooks": ["1 ball. It doubles every bounce. Watch the counter", "From 1 ball to half a million", "Guess the final number before it breaks"],
         "question": "What number did you guess?",
         "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 20, "max": 50,
+        "hue": False, "min": 20, "max": 58,
     },
     "battle": {
         "series": "Battle", "keyword": "Ball battle simulation",
         "hooks": ["Pick a side before it starts"],
         "question": "Who were you rooting for?",
         "tags": ["#satisfying", "#ballbattle", "#whowins", "#simulation"],
-        "hue": False, "min": 16, "max": 50,
+        "hue": False, "min": 26, "max": 62,
     },
     "piano": {
         "series": "Echo", "keyword": "Satisfying ball plays a song",
@@ -143,7 +143,9 @@ def interesting(mode, info):
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "overflow":
-        return 8 if info["state"] == "break" else None
+        return 8 if info["state"] == "break" and 32 <= d <= 56 else None
+    if mode == "bricks":
+        return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
         # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires)
         return 10 - info["hp"] / 10 if info["state"] == "win" else None
