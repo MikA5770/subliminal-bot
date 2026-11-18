@@ -690,8 +690,7 @@ sims.overflow={name:'14 · Overflow',hook:'Every bounce = 2 balls. Watch the cou
   draw(){
     if(this.state==='play'){ctx.beginPath();ctx.arc(CX,CY,this.R+6,0,TAU);ctx.lineWidth=3;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=22+this.flash*30;ctx.stroke();ctx.shadowBlur=0;}
     const{X,Y,n}=this;
-    if(n<=16){const ha=1-Math.log2(n)/5;for(let i=0;i<n;i++){const g=ctx.createRadialGradient(X[i],Y[i],0,X[i],Y[i],70);g.addColorStop(0,`rgba(196,181,253,${.55*ha})`);g.addColorStop(1,'rgba(139,92,246,0)');ctx.fillStyle=g;ctx.fillRect(X[i]-70,Y[i]-70,140,140);}}
-    if(n<1500){const r=this.rad();ctx.fillStyle='#ece6ff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=n<=16?28:10;
+    if(n<1500){const r=this.rad();ctx.fillStyle='#ece6ff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=10;
       ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r,Y[i]);ctx.arc(X[i],Y[i],r,0,TAU);}ctx.fill();ctx.shadowBlur=0;}
     else{const b=this.buf;b.fill(0);const cols=[0xfffde6ec,0xfffdc4d8,0xfffbb5c4,0xffffffff];
       if(!this.disc){this.disc=[];for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++)if(dx*dx+dy*dy<=36)this.disc.push(dy*W+dx);}const D=this.disc,DL=D.length;
