@@ -68,8 +68,7 @@ def build_input(service, channel_id, post, url, due):
         "text": text,
         "channelId": channel_id,
         "schedulingType": "automatic",
-        "mode": "customScheduled",
-        "dueAt": due,
+        "mode": "shareNow",
         "assets": [{"video": {"url": url, "metadata": {"thumbnailOffset": 1500}}}],
         "metadata": meta,
     }
@@ -87,7 +86,7 @@ def main():
     post = json.loads((ROOT / "out" / "post.json").read_text())
     url = os.environ["VIDEO_URL"]
     dry = os.environ.get("DRY_RUN") == "1"
-    due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=4)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     if dry and not os.environ.get("BUFFER_API_KEY"):
         for s in SERVICES:
@@ -113,9 +112,17 @@ def main():
         if dry:
             print(f"[TEST] {s} ({c['name']}):", json.dumps(inp, ensure_ascii=False))
             continue
-        res = gql(CREATE, {"input": inp})["createPost"]
+        try:
+            res = gql(CREATE, {"input": inp})["createPost"]
+        except RuntimeError as e:
+            res = {"message": str(e)}
+        if not (res.get("post")):
+            # Plan B : programmation dans 1 minute si la publication immédiate est refusée
+            print(f"Publication immédiate refusée pour {s} ({res.get('message')}), programmation dans 1 minute")
+            inp.update({"mode": "customScheduled", "dueAt": due})
+            res = gql(CREATE, {"input": inp})["createPost"]
         if "post" in res and res["post"]:
-            print(f"OK {s} ({c['name']}) : publication prévue à {res['post']['dueAt']}")
+            print(f"OK {s} ({c['name']}) : envoyé, publication {res['post']['dueAt'] or 'immédiate'}")
         else:
             failures += 1
             print(f"ÉCHEC {s} ({c['name']}) : {res.get('message')}")
