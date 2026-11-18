@@ -47,8 +47,10 @@ def pick_mode(state, forced=None):
 def pick_options(mode, state):
     m = MODES[mode]
     opts = {"hook": random.choice(m["hooks"]), "inst": random.choice(INSTRUMENTS)}
-    if mode == "piano":
+    if mode in ("piano", "glass"):
         opts["mel"] = random.choice([x for x in MELODIES if x != "run"])
+    if mode == "glass":
+        opts["inst"] = random.choice(["glass", "musicbox", "kalimba"])
     else:
         opts["mel"] = random.choice(MELODIES)
     if mode == "reveal":

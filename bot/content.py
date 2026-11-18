@@ -72,6 +72,13 @@ MODES = {
         "tags": ["#satisfying", "#flags", "#countries", "#oddlysatisfying"],
         "hue": False, "min": 18, "max": 45,
     },
+    "glass": {
+        "series": "Glass", "keyword": "Satisfying glass breaking ball simulation",
+        "hooks": ["One ball. Every pane is a note", "It breaks every single one", "Each pane was placed before it fell"],
+        "question": "Did you hear the song?",
+        "tags": ["#satisfying", "#glassbreaking", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 22, "max": 45,
+    },
     "piano": {
         "series": "Echo", "keyword": "Satisfying ball plays a song",
         "hooks": ["Listen closely", "Every touch is a note. Name it", "You know this song"],
@@ -99,6 +106,9 @@ def interesting(mode, info):
         gap = c[0] - c[1]
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
+    if mode == "glass":
+        # Assez de vitres pour que la vidéo soit impressionnante
+        return 5 + info["n"] / 20 if info["n"] >= 40 and info["state"] == "done" else None
     return 5
 
 
@@ -117,6 +127,7 @@ MODE_TAGS = {
     "reveal": ["#guesstheword", "#hiddenword", "#wordpuzzle", "#braintest", "#reveal"],
     "maze": ["#maze", "#spinningmaze", "#ballescape", "#labyrinth", "#puzzle"],
     "flags": ["#flags", "#countries", "#countryballs", "#worldbattle", "#flagbattle"],
+    "glass": ["#glassbreaking", "#ricochet", "#bouncingball", "#glass", "#oddlysatisfyingvideo"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
 }
 

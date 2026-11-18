@@ -157,6 +157,7 @@ function boxBounce(b,x0,y0,x1,y1){let h=false;
 function outlined(t,x,y,fill,mw=1000){ctx.save();ctx.shadowColor='rgba(150,120,255,.6)';ctx.shadowBlur=24;ctx.fillStyle=fill;ctx.fillText(t,x,y,mw);ctx.restore();}
 function big(t,y,size,fill='#fff'){const w=size>=90?200:(size>=60?300:500);ctx.font=`${w} ${size}px ${FONT}`;ctx.letterSpacing=`${Math.round(size*.12)}px`;ctx.textAlign='center';ctx.textBaseline='middle';outlined(String(t).toUpperCase(),W/2,y,fill);ctx.letterSpacing='0px';}
 function glowBall(x,y,r,fill,blur=28){ctx.save();ctx.shadowColor=fill;ctx.shadowBlur=blur;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fillStyle=fill;ctx.fill();ctx.restore();}
+function balanced(t,max){const w=t.split(' ');if(ctx.measureText(t).width<=max||w.length<2)return wrap(t,max);let best=null;for(let i=1;i<w.length;i++){const a=w.slice(0,i).join(' '),b=w.slice(i).join(' '),m=Math.max(ctx.measureText(a).width,ctx.measureText(b).width);if(m<=max&&(!best||m<best.m))best={m,l:[a,b]};}return best?best.l:wrap(t,max);}
 function wrap(t,max){const out=[];let line='';for(const w of t.split(' ')){const test=line?line+' '+w:w;if(ctx.measureText(test).width>max&&line){out.push(line);line=w;}else line=test;}out.push(line);return out;}
 function mk(){const c=document.createElement('canvas');c.width=W;c.height=H;return c;}
 const bgGrad=ctx.createRadialGradient(CX,CY,60,CX,CY,1250);bgGrad.addColorStop(0,'#160c2a');bgGrad.addColorStop(.55,'#08050f');bgGrad.addColorStop(1,'#000');
@@ -424,6 +425,77 @@ sims.piano={name:'9 · Name the song',hook:'Every bounce plays the next note. Na
   info(){return{state:this.state,played:this.played};}
 };
 
+/* ---------- Format : vitres placées sur chaque note ---------- */
+sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',inst:'glass',mel:'elise',
+  init(){
+    const G=1000,R=14,TH=12,PL=100,WALL=440;
+    this.G=G;this.R=R;this.TH=TH;this.PL=PL;this.WALL=WALL;
+    const m=melName==='run'?null:MEL[melName];const N=m?Math.min(70,m.length*2):56;
+    const dt=rnd(.34,.44);this.N=N;
+    const t0=1.0;let p={x:rnd(-120,120),y:0},v={x:rnd(-180,180),y:-200};
+    const segs=[{t:0,p:{...p},v:{...v}}];const panes=[];const path=[];
+    const posAt=(s,t)=>({x:s.p.x+s.v.x*(t-s.t),y:s.p.y+s.v.y*(t-s.t)+.5*G*(t-s.t)**2});
+    const velAt=(s,t)=>({x:s.v.x,y:s.v.y+G*(t-s.t)});
+    let k=0,guard=0;
+    while(k<N&&guard<3000){guard++;
+      const tk=t0+k*dt,prev=segs[segs.length-1];
+      const pk=posAt(prev,tk),vin=velAt(prev,tk);
+      // trajet déjà parcouru jusqu'à ce rebond
+      const path=[];for(let i=0;i<segs.length;i++){const a=segs[i],tb=i+1<segs.length?segs[i+1].t:tk;for(let t=a.t;t<tb;t+=.02)path.push({...posAt(a,t),t});}
+      let best=null;
+      for(let a=0;a<70;a++){
+        const T=dt,tx=Math.max(-WALL+60,Math.min(WALL-60,pk.x+rnd(-300,300))),ty=pk.y+rnd(-90,230);
+        if(Math.hypot(tx-pk.x,ty-pk.y)<115)continue;
+        let far=true;for(const o of panes)if(Math.hypot(o.c.x-tx,o.c.y-ty)<PL+10){far=false;break;}
+        if(!far)continue;
+        const vout={x:(tx-pk.x)/T,y:(ty-pk.y-.5*G*T*T)/T};
+        const dx=vout.x-vin.x,dy=vout.y-vin.y,dl=Math.hypot(dx,dy);if(dl<250)continue;
+        const n={x:dx/dl,y:dy/dl},tg={x:-n.y,y:n.x};
+        const sin=Math.hypot(vin.x,vin.y)||1,sout=Math.hypot(vout.x,vout.y);
+        const err=Math.abs((vin.x*tg.x+vin.y*tg.y)-(vout.x*tg.x+vout.y*tg.y))/Math.max(sin,sout)+Math.abs(sout-sin)/Math.max(sin,sout)*.6;
+        const c={x:pk.x-n.x*(R+TH/2),y:pk.y-n.y*(R+TH/2)};
+        let ok=true;
+        for(const q of path){if(q.t>tk-.2)continue;const rx=q.x-c.x,ry=q.y-c.y,along=rx*tg.x+ry*tg.y,acr=rx*n.x+ry*n.y;
+          if(Math.abs(along)<PL/2+R&&Math.abs(acr)<TH/2+R){ok=false;break;}}
+        if(!ok)continue;
+        if(!best||err<best.err)best={err,vout,n,tg,c};
+      }
+      if(!best){if(panes.length){panes.pop();segs.pop();k--;}continue;}
+      panes.push({c:best.c,ang:Math.atan2(best.tg.y,best.tg.x),t:tk,broken:false});
+      segs.push({t:tk,p:pk,v:best.vout});k++;
+    }
+    this.segs=segs;this.panes=panes;this.N=panes.length;this.broken=0;this.shards=[];this.t=0;this.cam=0;this.state='play';
+    this.posAt=posAt;this.tr=[];
+  },
+  seg(t){let s=this.segs[0];for(const x of this.segs){if(x.t<=t)s=x;else break;}return s;},
+  step(dt){this.t+=dt;const t=this.t;
+    for(const p of this.panes)if(!p.broken&&t>=p.t){p.broken=true;this.broken++;snd('n',1,0);snd('s',.35,.03);
+      for(let i=0;i<7;i++){const a=rnd(0,TAU),s=rnd(120,520);this.shards.push({x:p.c.x+Math.cos(p.ang)*rnd(-40,40),y:p.c.y+Math.sin(p.ang)*rnd(-40,40),vx:Math.cos(a)*s,vy:Math.sin(a)*s-200,a:p.ang+rnd(-1,1),va:rnd(-9,9),l:rnd(10,26),life:1});}}
+    for(const s of this.shards){s.vy+=1600*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;s.a+=s.va*dt;s.life-=dt*.9;}
+    this.shards=this.shards.filter(s=>s.life>0);
+    const b=this.posAt(this.seg(t),t);this.b=b;
+    this.cam+=(b.y+330-this.cam)*Math.min(1,dt*3.2);
+    this.tr.push(b.x,b.y);if(this.tr.length>36)this.tr.splice(0,2);
+    if(this.state==='play'&&this.broken>=this.N&&t>this.panes[this.N-1].t+1.2){this.state='done';this.end=3.2;snd('f',1,0);}
+  },
+  draw(){const ox=CX,oy=CY-this.cam;
+    ctx.strokeStyle='rgba(228,220,255,.35)';ctx.lineWidth=2;for(const sx of[-this.WALL,this.WALL]){ctx.beginPath();ctx.moveTo(ox+sx,0);ctx.lineTo(ox+sx,H);ctx.stroke();}
+    for(const p of this.panes){if(p.broken)continue;const y=oy+p.c.y;if(y<-120||y>H+120)continue;
+      ctx.save();ctx.translate(ox+p.c.x,y);ctx.rotate(p.ang);
+      ctx.fillStyle='rgba(196,181,253,.3)';ctx.fillRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
+      ctx.strokeStyle='rgba(228,220,255,.85)';ctx.lineWidth=1.5;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.strokeRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
+      ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.moveTo(-this.PL/2+8,-1);ctx.lineTo(-this.PL/2+30,-1);ctx.stroke();ctx.restore();}
+    ctx.strokeStyle='rgba(228,220,255,.9)';ctx.lineWidth=2;
+    for(const s of this.shards){ctx.globalAlpha=Math.max(0,s.life);ctx.beginPath();ctx.moveTo(ox+s.x-Math.cos(s.a)*s.l/2,oy+s.y-Math.sin(s.a)*s.l/2);ctx.lineTo(ox+s.x+Math.cos(s.a)*s.l/2,oy+s.y+Math.sin(s.a)*s.l/2);ctx.stroke();}
+    ctx.globalAlpha=1;
+    const tr=this.tr;for(let i=0;i<tr.length;i+=2){const k=i/tr.length;ctx.beginPath();ctx.arc(ox+tr[i],oy+tr[i+1],this.R*k,0,TAU);ctx.fillStyle=`rgba(200,180,255,${k*.45})`;ctx.fill();}
+    if(this.b)glowBall(ox+this.b.x,oy+this.b.y,this.R,'#ffffff',30);
+    big(`${this.broken} / ${this.N}`,470,90);big('PANES BROKEN',545,30,'rgba(255,255,255,.5)');
+    if(this.state==='done')big('ALL OF THEM',CY+120,90,'#ffffff');
+  },
+  info(){return{state:this.state,n:this.N,broken:this.broken};}
+};
+
 /* ---------- Boucle ---------- */
 let cur,curKey,last=0,rec=null;
 function load(k,ov={}){curKey=k;cur=sims[k];parts=[];simT=0;noteI=0;lastK={};cur.end=0;
@@ -435,7 +507,7 @@ function drawOverlay(){
   const ep=epIn.value.trim().replace(/^#/,'');
   if(ep){ctx.font=`500 32px ${FONT}`;ctx.letterSpacing='10px';ctx.textAlign='center';ctx.textBaseline='middle';const t='Nº '+ep,w=ctx.measureText(t).width+56;
     ctx.strokeStyle='rgba(228,220,255,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(W/2-w/2,132,w,58,29);ctx.stroke();ctx.fillStyle='#e4dcff';ctx.fillText(t,W/2+5,162);ctx.letterSpacing='0px';}
-  const h=hookIn.value.trim().toUpperCase();if(h){ctx.font=`500 46px ${FONT}`;ctx.letterSpacing='6px';ctx.textAlign='center';ctx.textBaseline='middle';wrap(h,960).forEach((l,i)=>outlined(l,W/2,270+i*66,'#fff'));ctx.letterSpacing='0px';}
+  const h=hookIn.value.trim().toUpperCase();if(h){ctx.font=`500 46px ${FONT}`;ctx.letterSpacing='6px';ctx.textAlign='center';ctx.textBaseline='middle';balanced(h,960).forEach((l,i)=>outlined(l,W/2,270+i*66,'#fff'));ctx.letterSpacing='0px';}
   const hd=handleIn.value.trim();if(hd){ctx.font=`400 30px ${FONT}`;ctx.letterSpacing='5px';ctx.globalAlpha=.45;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(hd,W/2,1855);ctx.globalAlpha=1;ctx.letterSpacing='0px';}
 }
 function render(){ctx.fillStyle=bgGrad;ctx.fillRect(0,0,W,H);cur.draw();drawParts();drawOverlay();drawGrain();

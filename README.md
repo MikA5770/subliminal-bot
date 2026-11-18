@@ -4,7 +4,7 @@ Deux fois par jour, ce robot crée une nouvelle vidéo « satisfaisante », puis
 
 ## Ce que fait chaque passage
 
-1. **Choix du format.** Le robot prend l'un des 9 formats, jamais un des 3 derniers publiés. Il favorise ceux qui ont été le moins utilisés.
+1. **Choix du format.** Le robot prend l'un des 10 formats, jamais un des 3 derniers publiés. Il favorise ceux qui ont été le moins utilisés.
 2. **Variation.** Il tire au hasard l'accroche, l'instrument, la mélodie, le mot secret (mode Mystery) et parfois les couleurs.
 3. **Contrôle qualité.** Il simule jusqu'à 40 parties et garde la plus intéressante : victoire de justesse, Color War serrée sans égalité, durée correcte.
 4. **Vidéo.** Il fabrique le MP4 en 1080 × 1920, avec le son et le numéro d'épisode de la série.
