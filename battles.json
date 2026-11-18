@@ -5,25 +5,81 @@
     "hook": "5 CEOs. One ring. Who is left standing?",
     "keyword": "CEO ball battle simulation Huang vs Musk vs Bezos vs Jobs vs Zuckerberg",
     "question": "Who did you want to win?",
-    "tags": ["#jensenhuang", "#nvidia", "#elonmusk"],
-    "fighters": [{"name": "Huang"}, {"name": "Musk"}, {"name": "Bezos"}, {"name": "Jobs"}, {"name": "Zuckerberg"}]
+    "tags": [
+      "#jensenhuang",
+      "#nvidia",
+      "#elonmusk"
+    ],
+    "fighters": [
+      {
+        "name": "Huang"
+      },
+      {
+        "name": "Musk"
+      },
+      {
+        "name": "Bezos"
+      },
+      {
+        "name": "Jobs"
+      },
+      {
+        "name": "Zuckerberg"
+      }
+    ],
+    "used": true
   },
   {
     "date": "2026-12-11",
     "title": "UFC 335 · Co-main",
-    "tags": ["#ufc335", "#pereira", "#ufc"],
-    "fighters": [{"name": "Pereira"}, {"name": "Pavlovich"}]
+    "tags": [
+      "#ufc335",
+      "#pereira",
+      "#ufc"
+    ],
+    "fighters": [
+      {
+        "name": "Pereira"
+      },
+      {
+        "name": "Pavlovich"
+      }
+    ]
   },
   {
     "date": "2026-12-12",
     "title": "UFC 335 · BMF title",
-    "tags": ["#ufc335", "#oliveira", "#ufc"],
-    "fighters": [{"name": "Oliveira"}, {"name": "Lopes"}]
+    "tags": [
+      "#ufc335",
+      "#oliveira",
+      "#ufc"
+    ],
+    "fighters": [
+      {
+        "name": "Oliveira"
+      },
+      {
+        "name": "Lopes"
+      }
+    ]
   },
   {
     "date": "2027-05-09",
     "title": "El Clásico",
-    "tags": ["#elclasico", "#realmadrid", "#fcbarcelona"],
-    "fighters": [{"name": "Real Madrid", "color": "#e4dcff"}, {"name": "Barça", "color": "#f9a8d4"}]
+    "tags": [
+      "#elclasico",
+      "#realmadrid",
+      "#fcbarcelona"
+    ],
+    "fighters": [
+      {
+        "name": "Real Madrid",
+        "color": "#e4dcff"
+      },
+      {
+        "name": "Barça",
+        "color": "#f9a8d4"
+      }
+    ]
   }
 ]
