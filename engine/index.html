@@ -428,7 +428,7 @@ sims.piano={name:'9 · Name the song',hook:'Every bounce plays the next note. Na
 /* ---------- Format : vitres placées sur chaque note ---------- */
 sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',inst:'glass',mel:'elise',
   init(){
-    const G=1000,R=14,TH=12,PL=100,WALL=440;
+    const G=1000,R=18,TH=16,PL=112,WALL=440;
     this.G=G;this.R=R;this.TH=TH;this.PL=PL;this.WALL=WALL;
     const m=melName==='run'?null:MEL[melName];const N=m?Math.min(70,m.length*2):56;
     const dt=rnd(.34,.44);this.N=N;
@@ -484,7 +484,7 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
       ctx.save();ctx.translate(ox+p.c.x,y);ctx.rotate(p.ang);
       ctx.fillStyle='rgba(196,181,253,.3)';ctx.fillRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
       ctx.strokeStyle='rgba(228,220,255,.85)';ctx.lineWidth=1.5;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.strokeRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
-      ctx.shadowBlur=0;ctx.strokeStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.moveTo(-this.PL/2+8,-1);ctx.lineTo(-this.PL/2+30,-1);ctx.stroke();ctx.restore();}
+      ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.85)';for(const d of[-.33,0,.33]){ctx.beginPath();ctx.arc(d*this.PL,0,2.2,0,TAU);ctx.fill();}ctx.restore();}
     ctx.strokeStyle='rgba(228,220,255,.9)';ctx.lineWidth=2;
     for(const s of this.shards){ctx.globalAlpha=Math.max(0,s.life);ctx.beginPath();ctx.moveTo(ox+s.x-Math.cos(s.a)*s.l/2,oy+s.y-Math.sin(s.a)*s.l/2);ctx.lineTo(ox+s.x+Math.cos(s.a)*s.l/2,oy+s.y+Math.sin(s.a)*s.l/2);ctx.stroke();}
     ctx.globalAlpha=1;
