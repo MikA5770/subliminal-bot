@@ -108,6 +108,13 @@ MODES = {
         "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 20, "max": 58,
     },
+    "crusher": {
+        "series": "Crusher", "keyword": "Satisfying ball crusher simulation, every crushed ball duplicates",
+        "hooks": ["Every ball it crushes comes back as two", "Crush one, get two. Until there's no room left", "Guess how many fit before it's full"],
+        "question": "How many did you think would fit?",
+        "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 25, "max": 50,
+    },
     "battle": {
         "series": "Battle", "keyword": "Ball battle simulation",
         "hooks": ["Pick a side before it starts"],
@@ -144,6 +151,8 @@ def interesting(mode, info):
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
+    if mode == "crusher":
+        return 8 if info["state"] == "full" and info["n"] >= 1000 else None
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
@@ -179,6 +188,7 @@ MODE_TAGS = {
     "bricks": ["#brickbreaker", "#bouncingball", "#breakout", "#ballescape", "#walls"],
     "split": ["#physics", "#breaking", "#guessthenumber", "#simulation", "#fractal"],
     "overflow": ["#ballmultiply", "#exponential", "#1ball", "#chaos", "#guessthenumber"],
+    "crusher": ["#hydraulicpress", "#crusher", "#duplication", "#physics", "#asmr"],
     "battle": ["#ballbattle", "#whowins", "#pickaside", "#battle", "#simulation"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
 }

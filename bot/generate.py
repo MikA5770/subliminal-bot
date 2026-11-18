@@ -64,7 +64,7 @@ IDEAS = ROOT / "ideas.json"
 BATTLES = ROOT / "battles.json"
 # Identifiant affiché en fond de vidéo, différent sur chaque plateforme (vide = rien)
 HANDLES = {
-    "tiktok": os.environ.get("HANDLE_TIKTOK", "@subliminal239"),
+    "tiktok": os.environ.get("HANDLE_TIKTOK", "@subliminal.tv"),
     "instagram": os.environ.get("HANDLE_INSTAGRAM", "@subliminal_tv"),
     "youtube": os.environ.get("HANDLE_YOUTUBE", "@Subliminal_TVi"),
 }
@@ -226,7 +226,7 @@ def main():
         page.goto(ENGINE.as_uri())
         page.evaluate("document.fonts.load('300 40px \"Montserrat\"')")
         page.wait_for_function("document.fonts.check('300 40px \"Montserrat\"')", timeout=20000)
-        seed, info = find_seed(page, mode, opts, tries=8 if mode == "overflow" else 40)
+        seed, info = find_seed(page, mode, opts, tries=8 if mode in ("overflow", "crusher") else 40)
         hue = random.choice([0, 40, 80, 140, 200, 260]) if MODES[mode]["hue"] else 0
         stamp = time.strftime("%Y%m%d-%H%M")
         mp4 = out / f"subliminal_{stamp}_{mode}_{ep}.mp4"

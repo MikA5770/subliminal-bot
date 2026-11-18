@@ -747,6 +747,64 @@ sims.battle={name:'15 · Battle',hook:'Pick a side before it starts',inst:'marim
   info(){const w=this.balls.length===1?this.balls[0]:null;return{state:this.state,win:w?w.name:'',hp:w?w.hp:0,left:this.balls.length};}
 };
 
+/* ---------- Format : la presse qui duplique ---------- */
+sims.crusher={name:'16 · Crusher',hook:'Every ball it crushes comes back as two',inst:'marimba',mel:'run',
+  init(){const R=440,r=13,CAP=1100;const N=CAP+50;
+    const pal=['#c4b5fd','#a78bfa','#f0abfc','#818cf8','#e9d5ff','#7dd3fc'];
+    Object.assign(this,{R,r,CAP,pal,X:new Float32Array(N),Y:new Float32Array(N),PX:new Float32Array(N),PY:new Float32Array(N),C:new Uint8Array(N),
+      n:0,crushed:0,t:0,acc:0,state:'play',flash:new Float32Array(N),
+      shape:rand()<.5?'bar':'vee',arms:[{px:CX-R,py:CY,base:0,A:rnd(1.0,1.25),w:rnd(.8,1.1),ph:rnd(0,TAU)},{px:CX+R,py:CY,base:Math.PI,A:rnd(1.0,1.25),w:rnd(.8,1.1),ph:rnd(0,TAU)}]});
+    for(let i=0;i<12;i++){const a=rnd(0,TAU),d=rnd(0,180);this.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,i%pal.length,rnd(-3,3),rnd(-3,3));}},
+  add(x,y,c,vx=0,vy=0){const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx;this.PY[i]=y-vy;this.C[i]=c;this.flash[i]=1;},
+  segs(){const out=[];for(const a of this.arms){const th=a.base+a.A*Math.sin(a.w*this.t+a.ph),L=this.R*.92;
+      if(this.shape==='bar')out.push([a.px,a.py,a.px+Math.cos(th)*L,a.py+Math.sin(th)*L]);
+      else{const kx=a.px+Math.cos(th+.45)*L*.55,ky=a.py+Math.sin(th+.45)*L*.55;out.push([a.px,a.py,kx,ky],[kx,ky,kx+Math.cos(th-.5)*L*.5,ky+Math.sin(th-.5)*L*.5]);}}
+    return out;},
+  phys(dt){const{X,Y,PX,PY,R,r}=this,n=this.n,S=this.segs(),D=2*r,AW=10;
+    for(let i=0;i<n;i++){let vx=(X[i]-PX[i])*.997,vy=(Y[i]-PY[i])*.997;const sp=Math.hypot(vx,vy),mn=this.n<300?2.4:1.4;if(sp<mn){if(sp<.05){const a=rand()*TAU;vx=Math.cos(a)*mn;vy=Math.sin(a)*mn;}else{vx*=mn/sp;vy*=mn/sp;}}if(sp>9){vx*=9/sp;vy*=9/sp;}PX[i]=X[i];PY[i]=Y[i];X[i]+=vx;Y[i]+=vy;}
+    // grille spatiale
+    const cs=D,gw=Math.ceil(2*R/cs)+2,gx0=CX-R-cs,gy0=CY-R-cs;const head=new Int32Array(gw*gw).fill(-1),next=new Int32Array(n);
+    const crush=[];
+    for(let it=0;it<3;it++){head.fill(-1);
+      for(let i=0;i<n;i++){const gx=clamp(((X[i]-gx0)/cs)|0,0,gw-1),gy=clamp(((Y[i]-gy0)/cs)|0,0,gw-1),k=gy*gw+gx;next[i]=head[k];head[k]=i;}
+      for(let i=0;i<n;i++){const gx=clamp(((X[i]-gx0)/cs)|0,0,gw-1),gy=clamp(((Y[i]-gy0)/cs)|0,0,gw-1);
+        for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const cx=gx+ox,cy=gy+oy;if(cx<0||cy<0||cx>=gw||cy>=gw)continue;
+          for(let j=head[cy*gw+cx];j>=0;j=next[j]){if(j<=i)continue;const dx=X[j]-X[i],dy=Y[j]-Y[i],d2=dx*dx+dy*dy;if(d2>=D*D||d2<1e-6)continue;
+            const d=Math.sqrt(d2),c=(D-d)/d*.5;X[i]-=dx*c;Y[i]-=dy*c;X[j]+=dx*c;Y[j]+=dy*c;}}}
+      for(let i=0;i<n;i++){
+        for(const[a,b,c,e]of S){const sx=c-a,sy=e-b,l2=sx*sx+sy*sy;let u=((X[i]-a)*sx+(Y[i]-b)*sy)/l2;u=clamp(u,0,1);const qx=a+sx*u,qy=b+sy*u,dx=X[i]-qx,dy=Y[i]-qy,d=Math.hypot(dx,dy);
+          if(d<r+AW/2){const m=d>1e-4?(r+AW/2-d)/d:0;if(m){X[i]+=dx*m;Y[i]+=dy*m;}else{X[i]+=-sy/Math.sqrt(l2)*(r+AW/2);Y[i]+=sx/Math.sqrt(l2)*(r+AW/2);}}}
+        const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d>R-r){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}}
+    // écrasé : coincé entre la presse et l'anneau
+    if(this.state==='play')for(let i=0;i<n;i++){for(const a of this.arms){if(Math.hypot(X[i]-a.px,Y[i]-a.py)<r+46){crush.push(i);break;}}}
+    for(const i of crush.sort((a,b)=>b-a)){if(this.n+1>this.CAP)break;const c=this.C[i],x=X[i],y=Y[i];
+      burst(x,y,262,14,420);snd('n',1,.06);this.crushed++;
+      const last=this.n-1;X[i]=X[last];Y[i]=Y[last];PX[i]=PX[last];PY[i]=PY[last];this.C[i]=this.C[last];this.flash[i]=this.flash[last];this.n--;
+      for(let k=0;k<2;k++){let bx=CX,by=CY,best=-1;for(let t=0;t<24;t++){const a=rnd(0,TAU),d=Math.sqrt(rand())*(R-3*r),qx=CX+Math.cos(a)*d,qy=CY+Math.sin(a)*d;
+          let m=1e9;for(let j=0;j<this.n;j+=Math.max(1,(this.n/200)|0))m=Math.min(m,Math.hypot(X[j]-qx,Y[j]-qy));if(m>best){best=m;bx=qx;by=qy;}}
+        this.add(bx,by,c,rnd(-2,2),rnd(-2,2));}}
+    if(this.state==='play'&&this.n>=this.CAP){this.state='full';this.end=3.2;snd('f',1,0);}},
+  step(dt){this.t+=dt;this.acc+=dt;for(let i=0;i<this.n;i++)this.flash[i]=Math.max(0,this.flash[i]-dt*2);
+    while(this.acc>=1/90){this.acc-=1/90;this.phys(1/90);}
+    if(this.state==='play'&&this.t>70){this.state='full';this.end=3;}},
+  draw(){const{X,Y,C,R,r,pal}=this;
+    ctx.beginPath();ctx.arc(CX,CY,R+4,0,TAU);ctx.lineWidth=3;ctx.strokeStyle='rgba(235,228,255,.85)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18;ctx.stroke();ctx.shadowBlur=0;
+    for(let c=0;c<pal.length;c++){ctx.fillStyle=pal[c];ctx.beginPath();for(let i=0;i<this.n;i++)if(C[i]===c){ctx.moveTo(X[i]+r-1,Y[i]);ctx.arc(X[i],Y[i],r-1,0,TAU);}ctx.fill();}
+    ctx.fillStyle='rgba(20,8,40,.35)';ctx.beginPath();for(let i=0;i<this.n;i++){ctx.moveTo(X[i]+r-1,Y[i]+3);ctx.arc(X[i]+1.5,Y[i]+3,r-4,0,TAU);}ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.75)';ctx.beginPath();for(let i=0;i<this.n;i++){ctx.moveTo(X[i]-3,Y[i]-5);ctx.arc(X[i]-5,Y[i]-5,2.6,0,TAU);}ctx.fill();
+    ctx.fillStyle='#fff';for(let i=0;i<this.n;i++)if(this.flash[i]>0){ctx.globalAlpha=this.flash[i]*.8;ctx.beginPath();ctx.arc(X[i],Y[i],r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
+    // presses
+    ctx.lineCap='round';
+    for(const[a,b,c,e]of this.segs()){ctx.strokeStyle='rgba(30,16,60,.95)';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,e);ctx.stroke();
+      ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=14;ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,e);ctx.stroke();ctx.shadowBlur=0;}
+    for(const a of this.arms){ctx.save();ctx.translate(a.px,a.py);ctx.rotate(this.t*2*(a.base?-1:1));ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.fillStyle='#0c0618';
+      ctx.beginPath();for(let k=0;k<12;k++){const t0=k*TAU/12;ctx.lineTo(Math.cos(t0)*30,Math.sin(t0)*30);ctx.lineTo(Math.cos(t0+.13)*38,Math.sin(t0+.13)*38);ctx.lineTo(Math.cos(t0+.39)*38,Math.sin(t0+.39)*38);ctx.lineTo(Math.cos(t0+.52)*30,Math.sin(t0+.52)*30);}
+      ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(0,0,9,0,TAU);ctx.stroke();ctx.restore();}
+    big(`${fmtN(this.n)} BALLS`,1640,96);big(`${fmtN(this.crushed)} CRUSHED`,1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='full')big('NO ROOM LEFT',CY-560,80,'#ffffff');},
+  info(){return{state:this.state,n:this.n,crushed:this.crushed,dur:+this.t.toFixed(1)};}
+};
+
 /* ---------- Boucle ---------- */
 let cur,curKey,last=0,rec=null;
 function load(k,ov={}){curKey=k;cur=sims[k];parts=[];simT=0;noteI=0;lastK={};cur.end=0;cur.endT0=0;

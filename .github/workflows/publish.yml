@@ -4,8 +4,8 @@ on:
   schedule:
     # Heures en UTC. 17:00 UTC = 18h à Paris en hiver (19h en été).
     # 00:00 UTC = 1h à Paris en hiver = 19h à New York.
-    - cron: "0 17 * * *"
-    - cron: "0 0 * * *"
+    - cron: "7 17 * * *"
+    - cron: "7 0 * * *"
   workflow_dispatch:
     inputs:
       publish:
@@ -16,7 +16,7 @@ on:
         description: "Forcer un format (vide = choix automatique)"
         type: choice
         default: ""
-        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, battle]
+        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, battle]
 
 permissions:
   contents: write
@@ -34,7 +34,7 @@ jobs:
       CHROME_PATH: /usr/bin/google-chrome
       HANDLE: ""
       # Identifiant affiché en fond de vidéo sur chaque plateforme
-      HANDLE_TIKTOK: "@subliminal239"
+      HANDLE_TIKTOK: "@subliminal.tv"
       HANDLE_INSTAGRAM: "@subliminal_tv"
       HANDLE_YOUTUBE: "@Subliminal_TVi"
     steps:
