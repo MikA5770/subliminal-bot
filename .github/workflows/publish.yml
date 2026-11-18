@@ -16,7 +16,7 @@ on:
         description: "Forcer un format (vide = choix automatique)"
         type: choice
         default: ""
-        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass]
+        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split]
 
 permissions:
   contents: write
@@ -89,7 +89,7 @@ jobs:
       - name: Enregistrer l'historique
         if: env.PUBLISH == 'true'
         run: |
-          git add state.json
+          git add state.json ideas.json
           git commit -q -m "Épisode publié" || exit 0
           git pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"

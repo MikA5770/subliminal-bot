@@ -15,7 +15,7 @@ from pathlib import Path
 import imageio_ffmpeg
 from playwright.sync_api import sync_playwright
 
-from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, interesting, platform_captions
+from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, end_cta, interesting, platform_captions
 
 ROOT = Path(__file__).resolve().parent.parent
 ENGINE = ROOT / "engine" / "index.html"
@@ -47,9 +47,9 @@ def pick_mode(state, forced=None):
 def pick_options(mode, state):
     m = MODES[mode]
     opts = {"hook": random.choice(m["hooks"]), "inst": random.choice(INSTRUMENTS)}
-    if mode in ("piano", "glass"):
+    if mode in ("piano", "pendulum"):
         opts["mel"] = random.choice([x for x in MELODIES if x != "run"])
-    if mode == "glass":
+    elif mode == "glass":
         opts["inst"] = random.choice(["glass", "musicbox", "kalimba"])
         opts["mel"] = random.choice([x for x in MELODIES if x not in ("run", "canon")])
     else:
@@ -58,6 +58,29 @@ def pick_options(mode, state):
         fresh = [w for w in SECRET_WORDS if w not in state["words"][-20:]]
         opts["secret"] = random.choice(fresh or SECRET_WORDS)
     return opts
+
+
+IDEAS = ROOT / "ideas.json"
+
+
+def take_idea(mode):
+    """Idée de la communauté pour ce format (ideas.json), créditée dans la vidéo et la légende."""
+    if not IDEAS.exists():
+        return None
+    ideas = json.loads(IDEAS.read_text())
+    for it in ideas:
+        if not it.get("used") and it.get("mode") == mode and it.get("by"):
+            return it
+    return None
+
+
+def mark_idea_used(idea):
+    ideas = json.loads(IDEAS.read_text())
+    for it in ideas:
+        if it == idea:
+            it["used"] = True
+            break
+    IDEAS.write_text(json.dumps(ideas, indent=2, ensure_ascii=False))
 
 
 def find_seed(page, mode, opts, tries=40):
@@ -123,10 +146,18 @@ def main():
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     state = load_state()
-    mode = pick_mode(state, a.mode)
+    pending = [it for it in (json.loads(IDEAS.read_text()) if IDEAS.exists() else [])
+               if not it.get("used") and it.get("mode") in MODES and it.get("by")]
+    forced = a.mode or next((it["mode"] for it in pending if it["mode"] not in state["history"][-1:]), None)
+    mode = pick_mode(state, forced)
     opts = pick_options(mode, state)
     ep = state["episodes"].get(mode, 0) + 1
-    opts.update({"ep": ep, "handle": HANDLE})
+    opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep)})
+    idea = take_idea(mode)
+    if idea:
+        opts["credit"] = f"Idea by {idea['by']}"
+        if idea.get("hook"):
+            opts["hook"] = idea["hook"]
     t0 = time.time()
 
     with sync_playwright() as p:
@@ -150,9 +181,14 @@ def main():
     post = {"mode": mode, "episode": ep, "seed": seed, "options": opts, "hue": hue, "duration": round(dur, 1),
             "result": info, "file": mp4.name, "caption": caption, "title": title,
             "captions": platform_captions(mode, ep, opts["hook"])}
+    if idea:
+        for k in post["captions"]:
+            post["captions"][k] = post["captions"][k].replace("\n\n", f"\n\nIdea by {idea['by']} 💜 Drop yours in the comments.\n\n", 1)
     (out / "post.json").write_text(json.dumps(post, indent=2, ensure_ascii=False))
 
     if not a.no_state:
+        if idea:
+            mark_idea_used(idea)
         state["history"] = (state["history"] + [mode])[-30:]
         state["episodes"][mode] = ep
         if mode == "reveal":

@@ -35,3 +35,13 @@ Les accroches, les questions, les hashtags et les mots secrets sont dans `bot/co
 ## Mettre en pause
 
 Onglet Actions > « Créer et publier une vidéo » > menu « ⋯ » > Disable workflow.
+
+
+## Idées des abonnés (« Idea by @… »)
+Quand un abonné propose une idée en commentaire, ajoute-la dans `ideas.json` :
+```json
+[{"mode": "split", "by": "@pseudo", "hook": "Optionnel : accroche proposée"}]
+```
+La prochaine vidéo prend ce format, affiche « IDEA BY @PSEUDO » sous l'accroche et le crédite dans la légende. L'idée est ensuite marquée `"used": true`.
+
+Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split.

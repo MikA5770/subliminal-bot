@@ -80,6 +80,27 @@ MODES = {
         "tags": ["#satisfying", "#glassbreaking", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 20, "max": 45,
     },
+    "pendulum": {
+        "series": "Weld", "keyword": "Satisfying double pendulum collects every block",
+        "hooks": ["Every block it touches sticks", "It keeps everything it hits", "Guess how many it carries at the end"],
+        "question": "How many blocks did you guess?",
+        "tags": ["#satisfying", "#doublependulum", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 20, "max": 45,
+    },
+    "bricks": {
+        "series": "Walls", "keyword": "Satisfying ball breaks every brick wall",
+        "hooks": ["One bounce. One brick. Until the walls are gone", "60 bricks. One ball. No way out", "Watch the box disappear"],
+        "question": "At what number did you think it would escape?",
+        "tags": ["#satisfying", "#brickbreaker", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 20, "max": 48,
+    },
+    "split": {
+        "series": "Splinter", "keyword": "Satisfying bar snaps into thousands of pieces",
+        "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
+        "question": "How many pieces did you guess?",
+        "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 14, "max": 40,
+    },
     "piano": {
         "series": "Echo", "keyword": "Satisfying ball plays a song",
         "hooks": ["Listen closely", "Every touch is a note. Name it", "You know this song"],
@@ -107,6 +128,10 @@ def interesting(mode, info):
         gap = c[0] - c[1]
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
+    if mode in ("pendulum", "bricks", "split"):
+        if info["state"] not in ("done", "clear"):
+            return None
+        return 5 + min(info.get("n", 0), 2000) / 1000
     if mode == "glass":
         # Assez de vitres pour que la vidéo soit impressionnante
         return 5 + info["n"] / 20 if info["n"] >= 30 and info["state"] == "done" else None
@@ -129,6 +154,9 @@ MODE_TAGS = {
     "maze": ["#maze", "#spinningmaze", "#ballescape", "#labyrinth", "#puzzle"],
     "flags": ["#flags", "#countries", "#countryballs", "#worldbattle", "#flagbattle"],
     "glass": ["#glassbreaking", "#ricochet", "#bouncingball", "#glass", "#oddlysatisfyingvideo"],
+    "pendulum": ["#doublependulum", "#pendulum", "#chaos", "#physics", "#guessthenumber"],
+    "bricks": ["#brickbreaker", "#bouncingball", "#breakout", "#ballescape", "#walls"],
+    "split": ["#physics", "#breaking", "#guessthenumber", "#simulation", "#fractal"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
 }
 
@@ -161,3 +189,17 @@ def platform_captions(mode, ep, hook):
     yt_tags = ["#shorts"] + _r.sample(MODE_TAGS[mode], 1) + _r.sample(CORE_TAGS, 1)
     youtube = _r.choice(YOUTUBE_TEMPLATES).format(**ctx) + "\n\n" + " ".join(yt_tags)
     return {"tiktok": tiktok, "instagram": insta, "youtube": youtube}
+
+
+# ---------- Appels à l'action (fin de vidéo) ----------
+# Pas de "like si…" (pénalisé comme engagement-bait) : on pousse le follow par la série
+# et le commentaire par une question à laquelle on a envie de répondre.
+CTA = {
+    "follow": ["Follow for Nº{next}", "Nº{next} tomorrow", "Nº{next} is even closer. Follow"],
+    "comment": ["Comment your guess", "Did you guess right?", "Suggest the next one below"],
+}
+
+
+def end_cta(ep):
+    kind = _r.choice(["follow", "follow", "comment"])
+    return _r.choice(CTA[kind]).format(next=ep + 1)
