@@ -99,11 +99,11 @@ MODES = {
         "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
         "question": "How many pieces did you guess?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 22, "max": 50,
+        "hue": False, "min": 12, "max": 50,
     },
     "overflow": {
-        "series": "Overflow", "keyword": "1 ball becomes 500,000 balls satisfying simulation",
-        "hooks": ["1 ball. It doubles every bounce. Watch the counter", "From 1 ball to half a million", "Guess the final number before it breaks"],
+        "series": "Overflow", "keyword": "1 ball becomes 262,144 balls satisfying simulation",
+        "hooks": ["1 ball. It doubles every bounce. Watch the counter", "From 1 ball to 262,144", "Guess the final number before it breaks"],
         "question": "What number did you guess?",
         "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 20, "max": 58,
@@ -143,7 +143,7 @@ def interesting(mode, info):
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "overflow":
-        return 8 if info["state"] == "break" and 32 <= d <= 56 else None
+        return 8 if info["state"] == "break" and 26 <= d <= 56 else None
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
@@ -220,8 +220,8 @@ def platform_captions(mode, ep, hook, override=None):
 # Pas de "like si…" (pénalisé comme engagement-bait) : on pousse le follow par la série
 # et le commentaire par une question à laquelle on a envie de répondre.
 CTA = {
-    "follow": ["Follow for Nº{next}", "Nº{next} tomorrow", "Nº{next} is even closer. Follow"],
-    "comment": ["Comment your guess", "Did you guess right?", "Suggest the next one below"],
+    "follow": ["Follow for Nº{next}", "Nº{next} tomorrow"],
+    "comment": ["Did you guess right?", "Suggest the next one below"],
 }
 
 

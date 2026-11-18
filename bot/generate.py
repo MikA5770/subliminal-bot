@@ -99,10 +99,13 @@ def mark_battle_used(battle):
     BATTLES.write_text(json.dumps(bs, indent=2, ensure_ascii=False))
 
 
-def add_handle(page, src, handle, dst):
+def add_handle(page, src, handle, dst, dur):
+    """Identifiant en fond, qui suit le fondu au noir de la fin."""
     png = dst.with_suffix(".png")
     png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
-    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-i", str(png), "-filter_complex", "[0][1]overlay",
+    st = max(0, dur - 0.5)
+    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-loop", "1", "-t", f"{dur:.2f}", "-i", str(png),
+                    "-filter_complex", f"[1]format=rgba,fade=t=out:st={st:.2f}:d=0.45:alpha=1[w];[0][w]overlay=shortest=1",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy",
                     "-movflags", "+faststart", str(dst)], check=True)
     png.unlink()
@@ -232,7 +235,7 @@ def main():
         for plat, h in HANDLES.items():
             if h:
                 dst = mp4.with_name(f"{mp4.stem}_{plat}.mp4")
-                add_handle(page, mp4, h, dst)
+                add_handle(page, mp4, h, dst, dur)
                 files[plat] = dst.name
             else:
                 files[plat] = mp4.name
