@@ -428,42 +428,53 @@ sims.piano={name:'9 · Name the song',hook:'Every bounce plays the next note. Na
 /* ---------- Format : vitres placées sur chaque note ---------- */
 sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',inst:'glass',mel:'elise',
   init(){
-    const G=1000,R=18,TH=16,PL=112,WALL=440;
+    const G=2300,R=18,TH=16,PL=112,WALL=440;
     this.G=G;this.R=R;this.TH=TH;this.PL=PL;this.WALL=WALL;
-    const m=melName==='run'?null:MEL[melName];const N=m?Math.min(70,m.length*2):56;
-    const dt=rnd(.34,.44);this.N=N;
-    const t0=1.0;let p={x:rnd(-120,120),y:0},v={x:rnd(-180,180),y:-200};
-    const segs=[{t:0,p:{...p},v:{...v}}];const panes=[];const path=[];
+    // Rythme réel de chaque mélodie (en unités), joué deux fois
+    const RHY={elise:[1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,3,1,1,1,1,1,1,1,1,1,3,1,1,1,3,1,1,1,4],
+      ode:[1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2,1,1,1,1,1,1,1,1,1,1,1,1,1.5,.5,2],
+      twinkle:[1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2,1,1,1,1,1,1,2],
+      canon:[2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,2]};
+    const UNIT={elise:.3,ode:.45,twinkle:.42,canon:.36,run:.36};
+    let rh=RHY[melName];if(!rh){rh=[];for(let i=0;i<30;i++)rh.push([1,1,2,1,1,3][i%6]);}
+    const durs=rh.concat(rh).map(d=>d*(UNIT[melName]||.3));
+    const N=Math.min(72,durs.length);this.N=N;
+    const t0=.5;const times=[t0];for(let i=1;i<N;i++)times.push(times[i-1]+durs[i-1]);
+    const segs=[{t:0,p:{x:rnd(-150,150),y:-.5*G*t0*t0},v:{x:rnd(-120,120),y:0}}];const panes=[];
     const posAt=(s,t)=>({x:s.p.x+s.v.x*(t-s.t),y:s.p.y+s.v.y*(t-s.t)+.5*G*(t-s.t)**2});
     const velAt=(s,t)=>({x:s.v.x,y:s.v.y+G*(t-s.t)});
     let k=0,guard=0;
-    while(k<N&&guard<3000){guard++;
-      const tk=t0+k*dt,prev=segs[segs.length-1];
+    while(k<N&&guard<6000){guard++;
+      const tk=times[k],prev=segs[segs.length-1];
       const pk=posAt(prev,tk),vin=velAt(prev,tk);
-      // trajet déjà parcouru jusqu'à ce rebond
       const path=[];for(let i=0;i<segs.length;i++){const a=segs[i],tb=i+1<segs.length?segs[i+1].t:tk;for(let t=a.t;t<tb;t+=.02)path.push({...posAt(a,t),t});}
+      const T=k+1<N?times[k+1]-tk:1.2;
       let best=null;
-      for(let a=0;a<70;a++){
-        const T=dt,tx=Math.max(-WALL+60,Math.min(WALL-60,pk.x+rnd(-300,300))),ty=pk.y+rnd(-90,230);
-        if(Math.hypot(tx-pk.x,ty-pk.y)<115)continue;
-        let far=true;for(const o of panes)if(Math.hypot(o.c.x-tx,o.c.y-ty)<PL+10){far=false;break;}
-        if(!far)continue;
-        const vout={x:(tx-pk.x)/T,y:(ty-pk.y-.5*G*T*T)/T};
-        const dx=vout.x-vin.x,dy=vout.y-vin.y,dl=Math.hypot(dx,dy);if(dl<250)continue;
-        const n={x:dx/dl,y:dy/dl},tg={x:-n.y,y:n.x};
-        const sin=Math.hypot(vin.x,vin.y)||1,sout=Math.hypot(vout.x,vout.y);
-        const err=Math.abs((vin.x*tg.x+vin.y*tg.y)-(vout.x*tg.x+vout.y*tg.y))/Math.max(sin,sout)+Math.abs(sout-sin)/Math.max(sin,sout)*.6;
-        const c={x:pk.x-n.x*(R+TH/2),y:pk.y-n.y*(R+TH/2)};
-        let ok=true;
-        for(const q of path){if(q.t>tk-.2)continue;const rx=q.x-c.x,ry=q.y-c.y,along=rx*tg.x+ry*tg.y,acr=rx*n.x+ry*n.y;
+      for(let a=0;a<90;a++){
+        // vrai rebond : on choisit l'inclinaison de la vitre, la physique fait le reste
+        const sv=Math.hypot(vin.x,vin.y)||1,ba=Math.atan2(-vin.y/sv,-vin.x/sv)+rnd(-1.1,1.1),n={x:Math.cos(ba),y:Math.sin(ba)};if(n.y>.3)continue;
+        const vn=vin.x*n.x+vin.y*n.y;if(vn>-120)continue;
+        const e=rnd(.8,.95),vout={x:vin.x-(1+e)*vn*n.x,y:vin.y-(1+e)*vn*n.y};
+        const nx=pk.x+vout.x*T,ny=pk.y+vout.y*T+.5*G*T*T,dy=ny-pk.y;
+        // la balle doit retomber sur la vitre suivante (pas la toucher en montant)
+        const arr=vout.y+G*T;
+        if(Math.abs(vout.x)>700)continue;
+        if(k+1<N&&(dy<-260||dy>520))continue;
+        let ok=true;for(let i=1;i<=10;i++){const tt=T*i/10;if(Math.abs(pk.x+vout.x*tt)>WALL-R){ok=false;break;}}
+        if(!ok&&k+1<N)continue;
+        if(k+1<N){if(Math.hypot(nx-pk.x,ny-pk.y)<55)continue;for(const o of panes)if(Math.hypot(o.c.x-nx,o.c.y-ny)<PL*.8){ok=false;break;}if(!ok)continue;}
+        const tg={x:-n.y,y:n.x},c={x:pk.x-n.x*(R+TH/2),y:pk.y-n.y*(R+TH/2)};
+        for(const q of path){if(q.t>tk-.15)continue;const rx=q.x-c.x,ry=q.y-c.y,along=rx*tg.x+ry*tg.y,acr=rx*n.x+ry*n.y;
           if(Math.abs(along)<PL/2+R&&Math.abs(acr)<TH/2+R){ok=false;break;}}
         if(!ok)continue;
-        if(!best||err<best.err)best={err,vout,n,tg,c};
+        const score=-Math.abs(dy-140)/110-Math.abs(vout.x)/900-Math.abs(nx)/WALL*.4+(arr>100?1:0)+(n.y<-.5?.5:0)+rnd(0,.5);
+        if(!best||score>best.score)best={score,vout,n,tg,c};
       }
-      if(!best){if(panes.length){panes.pop();segs.pop();k--;}continue;}
+      if(!best){const back=Math.min(panes.length,1+Math.floor(rnd(0,3)));for(let j=0;j<back;j++){panes.pop();segs.pop();k--;}continue;}
       panes.push({c:best.c,ang:Math.atan2(best.tg.y,best.tg.x),t:tk,broken:false});
       segs.push({t:tk,p:pk,v:best.vout});k++;
     }
+    this.N=panes.length;
     this.segs=segs;this.panes=panes;this.N=panes.length;this.broken=0;this.shards=[];this.t=0;this.cam=0;this.state='play';
     this.posAt=posAt;this.tr=[];
   },
@@ -476,7 +487,7 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
     const b=this.posAt(this.seg(t),t);this.b=b;
     this.cam+=(b.y+330-this.cam)*Math.min(1,dt*3.2);
     this.tr.push(b.x,b.y);if(this.tr.length>36)this.tr.splice(0,2);
-    if(this.state==='play'&&this.broken>=this.N&&t>this.panes[this.N-1].t+1.2){this.state='done';this.end=3.2;snd('f',1,0);}
+    if(this.state==='play'&&this.broken>=this.N&&t>(this.N?this.panes[this.N-1].t:0)+1.2){this.state='done';this.end=3.2;snd('f',1,0);}
   },
   draw(){const ox=CX,oy=CY-this.cam;
     ctx.strokeStyle='rgba(228,220,255,.35)';ctx.lineWidth=2;for(const sx of[-this.WALL,this.WALL]){ctx.beginPath();ctx.moveTo(ox+sx,0);ctx.lineTo(ox+sx,H);ctx.stroke();}
