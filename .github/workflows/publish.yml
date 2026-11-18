@@ -1,0 +1,96 @@
+name: Créer et publier une vidéo
+
+on:
+  schedule:
+    # Heures en UTC. 17:00 UTC = 18h à Paris en hiver (19h en été).
+    # 00:00 UTC = 1h à Paris en hiver = 19h à New York.
+    - cron: "0 17 * * *"
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publier pour de vrai sur TikTok, Instagram et YouTube (sinon simple test)"
+        type: boolean
+        default: false
+      mode:
+        description: "Forcer un format (vide = choix automatique)"
+        type: choice
+        default: ""
+        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish == true }}
+      CHROME_PATH: /usr/bin/google-chrome
+      HANDLE: "@subliminalbounce"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les outils
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          pip install -q playwright==1.48.0
+
+      - name: Créer la vidéo
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.mode }}" ]; then ARGS="$ARGS --mode ${{ inputs.mode }}"; fi
+          if [ "$PUBLISH" != "true" ]; then ARGS="$ARGS --no-state"; fi
+          python bot/generate.py $ARGS
+
+      - name: Garder une copie téléchargeable de la vidéo
+        uses: actions/upload-artifact@v4
+        with:
+          name: video
+          path: out/
+          retention-days: 7
+
+      - name: Héberger la vidéo (branche media)
+        if: env.PUBLISH == 'true'
+        run: |
+          FILE=$(python -c "import json;print(json.load(open('out/post.json'))['file'])")
+          git config --global user.name "subliminal-bot"
+          git config --global user.email "subliminal-bot@users.noreply.github.com"
+          REMOTE="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          mkdir -p /tmp/media && cd /tmp/media
+          if git clone -q --depth 1 --branch media "$REMOTE" repo 2>/dev/null; then cd repo; else mkdir repo && cd repo && git init -q && git remote add origin "$REMOTE"; fi
+          cp "$GITHUB_WORKSPACE/out/$FILE" .
+          # On garde seulement les 8 vidéos les plus récentes
+          ls -1t *.mp4 | tail -n +9 | xargs -r rm -f
+          git checkout -q --orphan fresh
+          git add -A && git commit -q -m "media $FILE"
+          git push -q -f origin fresh:media
+          URL="https://raw.githubusercontent.com/${{ github.repository }}/media/$FILE"
+          for i in $(seq 1 30); do
+            if curl -sfI "$URL" > /dev/null; then break; fi
+            sleep 10
+          done
+          echo "VIDEO_URL=$URL" >> "$GITHUB_ENV"
+
+      - name: Publier via Buffer
+        if: env.PUBLISH == 'true'
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: python bot/publish.py
+
+      - name: Enregistrer l'historique
+        if: env.PUBLISH == 'true'
+        run: |
+          git add state.json
+          git commit -q -m "Épisode publié" || exit 0
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push -q origin "HEAD:${GITHUB_REF_NAME}"
