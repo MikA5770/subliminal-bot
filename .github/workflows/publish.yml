@@ -1,12 +1,8 @@
 name: Créer et publier une vidéo
 
 on:
-  schedule:
-    # Heures en UTC. 17:00 UTC = 18h à Paris en hiver (19h en été).
-    # 00:00 UTC = 1h à Paris en hiver = 19h à New York.
-    - cron: "7 17 * * *"
-    - cron: "7 0 * * *"
-    - cron: "23 20 * * *"
+  # Les publications sont lancées par une tâche programmée de Claude (7h53, 11h53, 18h53 à Paris).
+  # La programmation de GitHub (schedule) ne se déclenchait pas sur ce dépôt.
   workflow_dispatch:
     inputs:
       publish:
