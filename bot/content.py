@@ -100,3 +100,52 @@ def interesting(mode, info):
         # Pas d'égalité (le gagnant doit être clair), mais une fin serrée
         return 10 - gap if 2 <= gap <= 6 else None
     return 5
+
+
+# ---------- Légendes par plateforme et hashtags variés ----------
+import random as _r
+
+CORE_TAGS = ["#satisfying", "#oddlysatisfying"]
+GENERAL_TAGS = ["#hypnotic", "#mesmerizing", "#satisfyingvideo", "#visualasmr", "#relaxing",
+                "#physics", "#simulation", "#calm", "#asmr", "#brainrelax", "#loop", "#trippy"]
+MODE_TAGS = {
+    "rings": ["#ballescape", "#escapechallenge", "#bouncingball", "#canitescape", "#rings"],
+    "multiply": ["#bouncingballs", "#multiply", "#chaos", "#ballsimulation", "#exponential"],
+    "grow": ["#growingball", "#bouncingball", "#guessthenumber", "#ballsimulation", "#bigger"],
+    "trail": ["#spiral", "#hypnosis", "#bouncingball", "#speed", "#tunnel"],
+    "war": ["#colorwar", "#pickacolor", "#teambattle", "#whowins", "#ballbattle"],
+    "reveal": ["#guesstheword", "#hiddenword", "#wordpuzzle", "#braintest", "#reveal"],
+    "maze": ["#maze", "#spinningmaze", "#ballescape", "#labyrinth", "#puzzle"],
+    "flags": ["#flags", "#countries", "#countryballs", "#worldbattle", "#flagbattle"],
+    "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
+}
+
+TIKTOK_TEMPLATES = [
+    "{keyword} 🌀 {question}",
+    "{keyword}. {question}",
+    "{keyword} | {series} Nº{ep}. {question}",
+]
+INSTAGRAM_TEMPLATES = [
+    "{keyword} | {series} Nº{ep}\n\n{question} 👇\n\nFollow for a new hypnotic simulation every day.",
+    "{series} Nº{ep}\n{keyword}.\n\n{question}\n\nNew episode every day 🌀",
+    "Try not to look away 👁️\n{keyword} | {series} Nº{ep}\n\n{question}",
+]
+YOUTUBE_TEMPLATES = [
+    "{keyword}. Episode {ep} of the {series} series: {hook_lc}.\n\n{question}\nSubscribe for a new hypnotic simulation every day.",
+    "{series} Nº{ep}: {keyword_lc} you can't stop watching.\n\n{question}\nNew Short every day on Subliminal.",
+]
+
+
+def _tags(mode, n_core, n_mode, n_gen):
+    return (_r.sample(CORE_TAGS, n_core) + _r.sample(MODE_TAGS[mode], n_mode) + _r.sample(GENERAL_TAGS, n_gen))
+
+
+def platform_captions(mode, ep, hook):
+    m = MODES[mode]
+    ctx = {"keyword": m["keyword"], "keyword_lc": m["keyword"].lower(), "series": m["series"], "ep": ep,
+           "question": m["question"], "hook_lc": hook.rstrip(".").lower()}
+    tiktok = _r.choice(TIKTOK_TEMPLATES).format(**ctx) + "\n\n" + " ".join(_tags(mode, 1, 2, 1))
+    insta = _r.choice(INSTAGRAM_TEMPLATES).format(**ctx) + "\n\n" + " ".join(_tags(mode, 2, 2, 1))
+    yt_tags = ["#shorts"] + _r.sample(MODE_TAGS[mode], 1) + _r.sample(CORE_TAGS, 1)
+    youtube = _r.choice(YOUTUBE_TEMPLATES).format(**ctx) + "\n\n" + " ".join(yt_tags)
+    return {"tiktok": tiktok, "instagram": insta, "youtube": youtube}

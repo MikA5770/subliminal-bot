@@ -49,7 +49,8 @@ def pick(values, wanted, default):
 
 
 def build_input(service, channel_id, post, url, due):
-    text = post["caption"]
+    # Une description différente par plateforme (repli sur la légende générale)
+    text = post.get("captions", {}).get(service, post["caption"])
     meta = {}
     if service == "instagram":
         meta = {"instagram": {"type": pick(enum_values("PostType"), "reel", "reel"), "shouldShareToFeed": True}}

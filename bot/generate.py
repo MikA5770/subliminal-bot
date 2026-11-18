@@ -15,7 +15,7 @@ from pathlib import Path
 import imageio_ffmpeg
 from playwright.sync_api import sync_playwright
 
-from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, interesting
+from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, interesting, platform_captions
 
 ROOT = Path(__file__).resolve().parent.parent
 ENGINE = ROOT / "engine" / "index.html"
@@ -145,7 +145,8 @@ def main():
 
     caption, title = captions(mode, ep, opts, info)
     post = {"mode": mode, "episode": ep, "seed": seed, "options": opts, "hue": hue, "duration": round(dur, 1),
-            "result": info, "file": mp4.name, "caption": caption, "title": title}
+            "result": info, "file": mp4.name, "caption": caption, "title": title,
+            "captions": platform_captions(mode, ep, opts["hook"])}
     (out / "post.json").write_text(json.dumps(post, indent=2, ensure_ascii=False))
 
     if not a.no_state:
