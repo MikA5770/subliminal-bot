@@ -12,6 +12,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import imageio_ffmpeg
 from playwright.sync_api import sync_playwright
 
 from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, interesting
@@ -22,6 +23,8 @@ STATE = ROOT / "state.json"
 FPS = 30
 CHROME = os.environ.get("CHROME_PATH", "/usr/bin/google-chrome")
 HANDLE = os.environ.get("HANDLE", "@subliminalbounce")
+# ffmpeg tout prêt fourni par le paquet imageio-ffmpeg (pas d'installation système)
+FFMPEG = os.environ.get("FFMPEG") or imageio_ffmpeg.get_ffmpeg_exe()
 
 
 def load_state():
@@ -74,7 +77,7 @@ def render(page, mode, seed, opts, out_mp4, hue_shift):
     tmp_v = out_mp4.with_suffix(".v.mp4")
     vf = ["-vf", f"hue=h={hue_shift}"] if hue_shift else []
     ff = subprocess.Popen(
-        ["ffmpeg", "-loglevel", "error", "-y", "-f", "image2pipe", "-framerate", str(FPS), "-c:v", "mjpeg",
+        [FFMPEG, "-loglevel", "error", "-y", "-f", "image2pipe", "-framerate", str(FPS), "-c:v", "mjpeg",
          "-i", "-", *vf, "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", str(tmp_v)],
         stdin=subprocess.PIPE)
     n = 0
@@ -89,7 +92,7 @@ def render(page, mode, seed, opts, out_mp4, hue_shift):
     dur = n / FPS
     wav = out_mp4.with_suffix(".wav")
     wav.write_bytes(base64.b64decode(page.evaluate(f"__exp.audio({dur})")))
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(tmp_v), "-i", str(wav), "-c:v", "copy",
+    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(tmp_v), "-i", str(wav), "-c:v", "copy",
                     "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", str(out_mp4)], check=True)
     tmp_v.unlink()
     wav.unlink()
