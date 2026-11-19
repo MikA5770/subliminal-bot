@@ -4,10 +4,11 @@
     "grow",
     "battle",
     "pendulum",
-    "flags"
+    "flags",
+    "multiply"
   ],
   "episodes": {
-    "multiply": 1,
+    "multiply": 2,
     "grow": 1,
     "battle": 1,
     "pendulum": 1,
