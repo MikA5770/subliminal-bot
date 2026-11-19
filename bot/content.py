@@ -234,10 +234,19 @@ def platform_captions(mode, ep, hook, override=None):
 # et le commentaire par une question à laquelle on a envie de répondre.
 CTA = {
     "follow": ["Follow for Nº{next}", "Nº{next} tomorrow"],
-    "comment": ["Did you guess right?", "Suggest the next one below"],
+    "comment": ["Suggest the next one below"],
+}
+# Question de fin qui colle à ce que la vidéo a demandé (« Did you guess right? » n'a pas de sens
+# après une vidéo où l'on n'a rien deviné, comme Multiply ou Trail)
+CTA_COMMENT = {
+    "grow": "Did you guess right?", "split": "Did you guess right?", "overflow": "Did you guess right?",
+    "pendulum": "Did you guess right?", "reveal": "At what % did you read it?", "piano": "Did you name it in time?",
+    "war": "Did your color win?", "crusher": "Did your color win?", "flags": "Did your country win?",
+    "rings": "Did you think it would make it?", "maze": "Did you think it would make it?",
 }
 
 
-def end_cta(ep):
+def end_cta(ep, mode=None):
     kind = _r.choice(["follow", "follow", "comment"])
-    return _r.choice(CTA[kind]).format(next=ep + 1)
+    options = CTA[kind] + ([CTA_COMMENT[mode]] if kind == "comment" and mode in CTA_COMMENT else [])
+    return _r.choice(options).format(next=ep + 1)

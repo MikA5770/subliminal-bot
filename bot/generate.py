@@ -208,7 +208,7 @@ def main():
             raise SystemExit(f"Battle « {battle.get('title', '')} » : il faut de 2 à 6 combattants, chacun avec un nom")
     opts = pick_options(mode, state)
     ep = state["episodes"].get(mode, 0) + 1
-    opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep)})
+    opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep, mode)})
     override = None
     if mode == "battle":
         opts["battle"] = {"title": battle.get("title", ""), "fighters": battle["fighters"]}
