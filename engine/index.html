@@ -339,13 +339,21 @@ sims.war={name:'5 · Color war',hook:'Pick a color before it starts! Who takes t
       if(d+b.r>=this.R&&reflect(b,CX,CY,this.R)){keepSpeed(b,750,1500);snd('n',imp(b));
         if(this.state==='play'){const i=Math.floor(norm(Math.atan2(b.y-CY,b.x-CX))/(TAU/this.N));for(let k=-2;k<=2;k++)this.seg[(i+k+this.N)%this.N]=b.t;burst(b.x,b.y,this.T[b.t][1],8,400);}}}
   },
-  draw(){const s=TAU/this.N;
-    for(let i=0;i<this.N;i++){ctx.beginPath();ctx.arc(CX,CY,this.R+16,i*s+.012,(i+1)*s-.012);ctx.lineWidth=16;const t=this.seg[i];ctx.strokeStyle=t<0?'#1d1630':`hsl(${this.T[t][1]},70%,64%)`;ctx.stroke();}
-    if(this.state==='play'){ctx.globalAlpha=.22;big(String(Math.ceil(this.time)),CY,260);ctx.globalAlpha=1;}
+  // Pourcentages entiers dont la somme tombe juste (méthode des plus forts restes)
+  pcts(c){const ex=c.map(v=>v/this.N*100),fl=ex.map(Math.floor);let rest=Math.round(ex.reduce((a,b)=>a+b,0))-fl.reduce((a,b)=>a+b,0);
+    ex.map((v,i)=>[v-fl[i],i]).sort((a,b)=>b[0]-a[0]).forEach(([,i])=>{if(rest>0&&c[i]>0){fl[i]++;rest--;}});return fl;},
+  draw(){const s=TAU/this.N,fade=this.state==='end'?clamp(sinceEnd()/.6,0,1):0;
+    // à la fin, les couleurs perdantes s'éteignent et seul l'anneau du gagnant reste allumé
+    for(let i=0;i<this.N;i++){ctx.beginPath();ctx.arc(CX,CY,this.R+16,i*s+.012,(i+1)*s-.012);ctx.lineWidth=16;const t=this.seg[i];ctx.strokeStyle=t<0?'#1d1630':`hsl(${this.T[t][1]},70%,64%)`;
+      ctx.globalAlpha=t>=0&&t!==this.win?1-.75*fade:1;ctx.stroke();}
+    ctx.globalAlpha=1;
+    // compte à rebours : plus visible et qui bat sur les 5 dernières secondes
+    if(this.state==='play'){const last=this.time<=5;ctx.globalAlpha=last?.42:.22;bigBump('cd',last?Math.ceil(this.time):99,String(Math.ceil(this.time)),CY,260,last?'#f0abfc':'#fff');ctx.globalAlpha=1;}
     for(const b of this.balls)glowBall(b.x,b.y,b.r,`hsl(${this.T[b.t][1]},70%,68%)`);
-    const c=this.counts();
-    this.T.forEach((t,i)=>{ctx.font=`400 46px ${FONT}`;ctx.letterSpacing='6px';ctx.textAlign='center';ctx.textBaseline='middle';outlined(`${t[0]} ${Math.round(c[i]/this.N*100)}%`,290+(i%2)*500,1600+Math.floor(i/2)*95,`hsl(${t[1]},70%,74%)`);ctx.letterSpacing='0px';});
-    if(this.state==='end')big(`${this.T[this.win][0]} WINS`,CY,110,`hsl(${this.T[this.win][1]},70%,74%)`);
+    const p=this.pcts(this.counts());
+    this.T.forEach((t,i)=>{ctx.font=`400 46px ${FONT}`;ctx.letterSpacing='6px';ctx.textAlign='center';ctx.textBaseline='middle';ctx.globalAlpha=i===this.win||this.win<0?1:1-.5*fade;
+      outlined(`${t[0]} ${p[i]}%`,293+(i%2)*500,1600+Math.floor(i/2)*95,`hsl(${t[1]},70%,74%)`);ctx.letterSpacing='0px';ctx.globalAlpha=1;});
+    if(this.state==='end')popBig(`${this.T[this.win][0]} WINS`,CY,110,`hsl(${this.T[this.win][1]},70%,74%)`);
   },
   info(){return{state:this.state,c:this.counts()};}
 };
@@ -444,10 +452,11 @@ sims.flags={name:'8 · Last flag standing',hook:'Comment your country! The last 
     if(this.state==='win'){const b=this.balls[0];b.x+=(CX-b.x)*Math.min(1,dt*4);b.y+=(CY+40-b.y)*Math.min(1,dt*4);b.r+=(150-b.r)*Math.min(1,dt*4);for(const f of this.fall)move(f,dt,1500);this.fall=this.fall.filter(f=>f.y<H+80);return;}
     for(const b of this.balls)move(b,dt,900);
     for(let i=0;i<this.balls.length;i++)for(let j=i+1;j<this.balls.length;j++)if(collide(this.balls[i],this.balls[j]))snd('b',.6,.06);
-    const keep=[];
+    const keep=[];let alive=this.balls.length;
     for(const b of this.balls){const d=Math.hypot(b.x-CX,b.y-CY);
       if(d+b.r>=this.R){
-        if(this.state==='play'&&inGap(b,CX,CY,this.rot,this.gap)){if(d-b.r>this.R){this.fall.push(b);this.toast=`${FLAGS[b.f][0]} IS OUT!`;this.toastT=1.8;snd('s',.7,0);this.gap+=.03;continue;}}
+        // jamais zéro drapeau : si les deux derniers passent la brèche au même instant, le dernier rebondit
+        if(this.state==='play'&&alive>1&&inGap(b,CX,CY,this.rot,this.gap)){if(d-b.r>this.R){this.fall.push(b);alive--;this.toast=`${FLAGS[b.f][0]} IS OUT!`;this.toastT=1.8;snd('s',.7,0);this.gap+=.03;continue;}}
         else if(reflect(b,CX,CY,this.R)){snd('n',imp(b),.06);keepSpeed(b,650,1500);}
       }
       keep.push(b);}
@@ -457,9 +466,11 @@ sims.flags={name:'8 · Last flag standing',hook:'Comment your country! The last 
   draw(){
     ctx.beginPath();ctx.arc(CX,CY,this.R,this.rot+this.gap,this.rot+TAU);ctx.lineWidth=4;ctx.lineCap='round';ctx.strokeStyle='#fff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=20;ctx.stroke();ctx.shadowBlur=0;
     for(const b of this.fall.concat(this.balls))flagBall(b.f,b.x,b.y,b.r);
-    if(this.state==='win')big(`${FLAGS[this.win][0]} WINS!`,CY-250,110,'#ffffff');
-    else{big(`${this.balls.length} LEFT`,1610,90);if(this.toastT>0)big(this.toast,1720,56,'#f0abfc');}
-    if(this.state==='play'){ctx.font=`30px ${FONT}`;ctx.fillStyle='#8a8aa0';ctx.textAlign='center';const n=this.balls.map(b=>FLAGS[b.f][0]),h=Math.ceil(n.length/2);ctx.fillText(n.slice(0,h).join('  ·  '),W/2,1790);ctx.fillText(n.slice(h).join('  ·  '),W/2,1835);}},
+    // titre sous l'anneau (à la place du compteur) : il ne chevauche plus le cercle
+    if(this.state==='win')popBig(`${FLAGS[this.win][0]} WINS!`,1620,110,'#ffffff');
+    else{bigBump('n',this.balls.length,`${this.balls.length} LEFT`,1610,90);if(this.toastT>0)big(this.toast,1720,56,'#f0abfc');}
+    // pays encore en jeu : police plus grande et plus contrastée (illisible sur téléphone à 30 px gris)
+    if(this.state==='play'){ctx.font=`500 36px ${FONT}`;ctx.letterSpacing='3px';ctx.fillStyle='#b4acd0';ctx.textAlign='center';ctx.textBaseline='middle';const n=this.balls.map(b=>FLAGS[b.f][0]),h=Math.ceil(n.length/2);ctx.fillText(n.slice(0,h).join('  ·  '),W/2+1.5,1800,1000);ctx.fillText(n.slice(h).join('  ·  '),W/2+1.5,1852,1000);ctx.letterSpacing='0px';}},
   info(){return{state:this.state,left:this.balls.length,win:this.win>=0?FLAGS[this.win][0]:''};}
 };
 
