@@ -248,10 +248,11 @@ sims.rings={name:'1 · Escape rings',hook:'Can the ball escape all 16 rings befo
     ctx.shadowBlur=0;const tr=this.tr,b=this.b;
     for(let i=0;i<tr.length;i+=2){const k=i/tr.length;ctx.beginPath();ctx.arc(tr[i],tr[i+1],b.r*k,0,TAU);ctx.fillStyle=`rgba(200,180,255,${k*.45})`;ctx.fill();}
     glowBall(b.x,b.y,b.r,'#fff');
-    big(this.time.toFixed(2),1640,96,this.time<10?'#f0abfc':'#fff');
-    big(`${this.rings.filter(r=>r.alive).length} RINGS LEFT`,1750,44,'rgba(255,255,255,.5)');
-    if(this.state==='win')big('ESCAPED!',CY,130,'#ffffff');
-    if(this.state==='lose')big("TIME'S UP!",CY,120,'#f0abfc');
+    timer(this.time,this.state==='play');
+    const left=this.rings.filter(r=>r.alive).length;
+    bigBump('left',left,`${left} ${left===1?'RING':'RINGS'} LEFT`,1750,44,'rgba(255,255,255,.5)');
+    if(this.state==='win')popBig('ESCAPED!',CY,130,'#ffffff');
+    if(this.state==='lose')popBig("TIME'S UP!",CY,120,'#f0abfc');
   },
   info(){return{state:this.state,left:this.rings.filter(r=>r.alive).length,time:+this.time.toFixed(1)};}
 };
@@ -408,9 +409,9 @@ sims.maze={name:'7 · Spinning maze',hook:'Can it escape the spinning maze in 45
     ctx.shadowBlur=0;for(const s of this.walls){ctx.beginPath();ctx.moveTo(s[0],s[1]);ctx.lineTo(s[2],s[3]);ctx.lineWidth=10;ctx.strokeStyle='#ff6b9d';ctx.stroke();}
     const tr=this.tr,b=this.b;for(let i=0;i<tr.length;i+=2){const k=i/tr.length;ctx.beginPath();ctx.arc(tr[i],tr[i+1],b.r*k,0,TAU);ctx.fillStyle=`rgba(200,180,255,${k*.45})`;ctx.fill();}
     glowBall(b.x,b.y,b.r,'#ffffff');ctx.restore();
-    big(this.time.toFixed(2),1640,96,this.time<10?'#f0abfc':'#fff');
-    big(`LAYER ${Math.min(this.level(),8)} / 8`,1750,44,'rgba(255,255,255,.5)');
-    if(this.state==='win')big('ESCAPED!',CY,130,'#ffffff');if(this.state==='lose')big("TIME'S UP!",CY,120,'#f0abfc');},
+    timer(this.time,this.state==='play');
+    const lv=Math.min(this.level(),8);bigBump('lv',lv,`LAYER ${lv} / 8`,1750,44,'rgba(255,255,255,.5)');
+    if(this.state==='win')popBig('ESCAPED!',CY,130,'#ffffff');if(this.state==='lose')popBig("TIME'S UP!",CY,120,'#f0abfc');},
   info(){return{state:this.state,lvl:this.level(),time:+this.time.toFixed(1)};}
 };
 
