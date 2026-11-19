@@ -279,24 +279,26 @@ sims.multiply={name:'2 · +2 per escape',hook:'Every escape = 2 new balls. Can t
   draw(){
     if(this.state==='play'){ctx.beginPath();ctx.arc(CX,CY,this.R,this.rot+this.gap,this.rot+TAU);ctx.lineWidth=4;ctx.lineCap='round';ctx.strokeStyle='#fff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=20;ctx.stroke();ctx.shadowBlur=0;}
     for(const b of this.balls.concat(this.fall)){ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,TAU);ctx.fillStyle=`hsl(${250+b.hue%50},65%,${68+b.hue%25}%)`;ctx.fill();}
-    big(String(this.state==='play'?this.balls.length:this.cap),1640,120);
-    big('BALLS',1750,46,'rgba(255,255,255,.5)');
-    if(this.state==='break')big('IT BROKE!',CY,130,'#ffffff');
+    const n=this.state==='play'?this.balls.length:this.cap;
+    bigBump('n',n,String(n),1640,120);
+    big(n===1?'BALL':'BALLS',1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='break')popBig('IT BROKE!',CY,130,'#ffffff');
   },
   info(){return{state:this.state,n:this.balls.length};}
 };
 
 sims.grow={name:'3 · Grows every bounce',hook:'It grows every bounce. Guess the final count!',inst:'musicbox',mel:'elise',
-  init(){this.R=470;this.b={x:CX,y:CY-180,vx:rnd(500,700)*(rand()<.5?-1:1),vy:0,r:20};this.pts=[];this.n=0;this.state='play';},
+  // Croissance par rebond tirée à chaque partie : le nombre final change d'une vidéo à l'autre
+  init(){this.R=470;this.b={x:CX,y:CY-180,vx:rnd(500,700)*(rand()<.5?-1:1),vy:0,r:20};this.pts=[];this.n=0;this.state='play';this.gr=rnd(2.3,3.7);},
   step(dt){if(this.state!=='play')return;const b=this.b;move(b,dt,1300);const d=Math.hypot(b.x-CX,b.y-CY);
-    if(d+b.r>=this.R&&reflect(b,CX,CY,this.R)){keepSpeed(b,1000,2300);this.pts.push(Math.atan2(b.y-CY,b.x-CX));b.r+=3;this.n++;snd('n',imp(b),.03);
+    if(d+b.r>=this.R&&reflect(b,CX,CY,this.R)){keepSpeed(b,1000,2300);this.pts.push(Math.atan2(b.y-CY,b.x-CX));b.r+=this.gr*rnd(.75,1.25);this.n++;snd('n',imp(b),.03);
       if(b.r>=this.R-10){this.state='pop';this.end=3.5;burst(CX,CY,262,220,1600);snd('s',1,0);snd('f',1,0);}}},
   draw(){const b=this.b;
     if(this.state==='play'){ctx.lineWidth=1.5;this.pts.forEach((a,i)=>{ctx.beginPath();ctx.moveTo(CX+Math.cos(a)*this.R,CY+Math.sin(a)*this.R);ctx.lineTo(b.x,b.y);ctx.strokeStyle=`rgba(215,200,255,${.1+.45*i/this.pts.length})`;ctx.stroke();});}
     ctx.beginPath();ctx.arc(CX,CY,this.R,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18;ctx.stroke();ctx.shadowBlur=0;
     if(this.state==='play'){glowBall(b.x,b.y,b.r,'#7c3aed',30);ctx.lineWidth=2;ctx.strokeStyle='#fff';ctx.stroke();}
-    big(String(this.n),1640,120);big('BOUNCES',1750,44,'rgba(255,255,255,.5)');
-    if(this.state==='pop')big('POP!',CY,150,'#fff');
+    bigBump('n',this.n,String(this.n),1640,120);big(this.n===1?'BOUNCE':'BOUNCES',1750,44,'rgba(255,255,255,.5)');
+    if(this.state==='pop')popBig('POP!',CY,150,'#fff');
   },
   info(){return{state:this.state,n:this.n};}
 };
@@ -718,15 +720,20 @@ sims.overflow={name:'14 · Overflow',hook:'Every bounce = 2 balls. Watch the cou
   draw(){
     {const gp=this.state==='play'?0:.6;ctx.beginPath();ctx.arc(CX,CY,this.R+6,Math.PI/2+gp,Math.PI/2+TAU-gp);ctx.lineWidth=3;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=22+this.flash*30;ctx.stroke();ctx.shadowBlur=0;}
     const{X,Y,n}=this;
-    if(n<1500){const r=this.rad();ctx.fillStyle='#ece6ff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=10;
-      ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r,Y[i]);ctx.arc(X[i],Y[i],r,0,TAU);}ctx.fill();ctx.shadowBlur=0;}
-    else{const b=this.buf;b.fill(0);const cols=[0xFFE67896,0xFFFAA0B4,0xFFD25A78,0xFFFFD2DC];
-      if(!this.disc){this.disc=[];for(let dy=-6;dy<=6;dy++)for(let dx=-6;dx<=6;dx++)if(dx*dx+dy*dy<=36)this.disc.push(dy*W+dx);}const D=this.disc,DL=D.length;
-      for(let i=0;i<n;i++){const x=X[i]|0,y=Y[i]|0;if(x<7||y<7||x>=W-7||y>=H-7)continue;const c=cols[i&3],o=y*W+x;for(let k=0;k<DL;k++)b[o+D[k]]=c;}
-      this.offc.putImageData(this.img,0,0);ctx.save();ctx.globalAlpha=.85;ctx.drawImage(this.off,0,0);ctx.restore();}
+    // mêmes 4 teintes dans les deux modes de dessin (le blanc du début glisse vers le violet) : pas de saut de couleur à 1 500 balles
+    const PALB=[[150,120,230],[180,160,250],[120,90,210],[220,210,255]];
+    if(n<1500){const r=this.rad(),f=clamp((Math.log2(n)-6)/4.55,0,1);ctx.shadowColor='#a78bfa';ctx.shadowBlur=10;ctx.globalAlpha=1-.15*f;
+      for(let g=0;g<4;g++){const c=PALB[g];ctx.fillStyle=`rgb(${236+(c[0]-236)*f|0},${230+(c[1]-230)*f|0},${255+(c[2]-255)*f|0})`;
+        ctx.beginPath();for(let i=g;i<n;i+=4){ctx.moveTo(X[i]+r,Y[i]);ctx.arc(X[i],Y[i],r,0,TAU);}ctx.fill();}
+      ctx.shadowBlur=0;ctx.globalAlpha=1;}
+    else{// dessin direct en pixels écran : les balles qui s'écoulent ne sont plus coupées net au bas de la zone de jeu
+      const b=this.buf;b.fill(0);const cols=PALB.map(c=>(0xFF000000|c[2]<<16|c[1]<<8|c[0])>>>0);
+      if(!this.disc){this.disc=[];for(let dy=-5;dy<=5;dy++)for(let dx=-5;dx<=5;dx++)if(dx*dx+dy*dy<=26)this.disc.push(dy*W+dx);}const D=this.disc,DL=D.length;
+      for(let i=0;i<n;i++){const x=(CX+(X[i]-CX)*VS)|0,y=(VY+(Y[i]-CY)*VS)|0;if(x<6||y<6||x>=W-6||y>=H-6)continue;const c=cols[i&3],o=y*W+x;for(let k=0;k<DL;k++)b[o+D[k]]=c;}
+      this.offc.putImageData(this.img,0,0);ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=.85;ctx.drawImage(this.off,0,0);ctx.restore();}
     const s=1+this.flash*.12;ctx.save();ctx.translate(W/2,1640);ctx.scale(s,s);ctx.translate(-W/2,-1640);big(fmtN(this.n),1640,this.n>99999?100:118);ctx.restore();
-    big('BALLS',1750,46,'rgba(255,255,255,.5)');
-    if(this.state==='break')big('OVERFLOW',CY-560,90,'#ffffff');
+    big(this.n===1?'BALL':'BALLS',1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='break')popBig('OVERFLOW',CY-560,90,'#ffffff');
   },
   info(){return{state:this.state,n:this.n,cap:this.CAP};}
 };
