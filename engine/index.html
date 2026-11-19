@@ -963,8 +963,9 @@ window.__exp={
   // lead : l'image n°k montre l'état à la fin de son intervalle (k+1)/fps mais s'affiche à k/fps ;
   // on avance les sons d'une demi-image pour que chaque note tombe pile sur l'impact visible
   async audio(dur,lead=1/60){const sr=44100,oc=new OfflineAudioContext(2,Math.ceil(sr*dur),sr),ch=makeChain(oc);
-    // fondu de sortie calé sur le fondu au noir de l'image (plus de coupure sèche de la réverbération)
-    const out=oc.createGain();out.gain.setValueAtTime(1,Math.max(0,dur-.5));out.gain.linearRampToValueAtTime(0,dur);ch.comp.connect(out);out.connect(oc.destination);
+    // fondu de sortie calé sur le fondu au noir de l'image (plus de coupure sèche de la réverbération),
+    // et 1 dB de marge : les pics de fin (éclat + fanfare) touchaient 0 dBFS une fois encodés en AAC
+    const out=oc.createGain();out.gain.setValueAtTime(.89,0);out.gain.setValueAtTime(.89,Math.max(0,dur-.5));out.gain.linearRampToValueAtTime(0,dur);ch.comp.connect(out);out.connect(oc.destination);
     for(const e of events)if(e.t<dur-.05)synth(oc,ch,Math.max(0,e.t-lead),e);
     {const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=600;const g=oc.createGain();g.gain.setValueAtTime(0,0);g.gain.linearRampToValueAtTime(.05,1.5);g.gain.setValueAtTime(.05,Math.max(1.6,dur-1.5));g.gain.linearRampToValueAtTime(0,dur);lp.connect(g);g.connect(ch.input);
      [55,55.4,82.5,110.3].forEach(f=>{const o=oc.createOscillator();o.type='sine';o.frequency.value=f;o.connect(lp);o.start(0);o.stop(dur);});}const buf=await oc.startRendering();return wavB64(buf);}
