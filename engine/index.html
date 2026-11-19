@@ -820,7 +820,10 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
       jaws:[{px:CX-R,py:CY,a0:rnd(0,TAU),w:rnd(1.1,1.35),a:125,L:240,col:1,name:'LILAC'},{px:CX+R,py:CY,a0:rnd(0,TAU),w:-rnd(1.1,1.35),a:125,L:240,col:2,name:'PINK'}]});
     for(let i=0;i<16;i++){const a=i/16*TAU,d=i%2?40:0;this.add(CX+Math.cos(a)*(d+38),CY+Math.sin(a)*(d+38),0,Math.cos(a)*rnd(3,5),Math.sin(a)*rnd(3,5));}},
   add(x,y,c,vx=0,vy=0){const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx;this.PY[i]=y-vy;this.C[i]=c;this.F[i]=1;this.IM[i]=.4;},
-  segs(){const out=[];for(const j of this.jaws){const th=j.a0+j.w*this.t,c=Math.cos(th),s=Math.sin(th);
+  // la mâchoire balaie l'intérieur de l'anneau d'avant en arrière (bielle sur l'engrenage qui tourne) :
+  // elle ne sort plus du cadre de la vidéo et écrase en continu (parties de 35 à 45 s au lieu de 60 à 70 s)
+  ang(j){return(j.col===1?0:Math.PI)+1.3*Math.sin(j.a0+j.w*this.t);},
+  segs(){const out=[];for(const j of this.jaws){const th=this.ang(j),c=Math.cos(th),s=Math.sin(th);
       const P=(x,y)=>[j.px+x*c-y*s,j.py+x*s+y*c];
       const p1=P(j.L,-j.a),p2=P(0,-j.a),p3=P(0,j.a),p4=P(j.L,j.a);
       out.push([...p1,...p2],[...p2,...p3],[...p3,...p4]);}
@@ -842,7 +845,7 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
     if(this.state!=='play')return;
     const crush=[];
     for(let i=0;i<n;i++){if(this.IM[i]>0||Math.hypot(X[i]-CX,Y[i]-CY)<R-this.ZONE)continue;
-      for(const j of this.jaws){const th=j.a0+j.w*this.t,c=Math.cos(th),sn=Math.sin(th),dx=X[i]-j.px,dy=Y[i]-j.py,xl=dx*c+dy*sn,yl=-dx*sn+dy*c;
+      for(const j of this.jaws){const th=this.ang(j),c=Math.cos(th),sn=Math.sin(th),dx=X[i]-j.px,dy=Y[i]-j.py,xl=dx*c+dy*sn,yl=-dx*sn+dy*c;
         if(xl>-4&&xl<j.L&&Math.abs(yl)<j.a){crush.push([i,j.col]);break;}}}
     for(const [i,nc] of crush.sort((a,b)=>b[0]-a[0])){if(this.n+1>this.CAP)break;const x=X[i],y=Y[i];
       burst(x,y,nc===1?262:300,8,260);snd('n',1,.07);this.crushed++;
@@ -872,7 +875,8 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
     let a=0,b=0;for(let i=0;i<n;i++){if(C[i]===1)a++;else if(C[i]===2)b++;}this.cnt=[a,b];
     ctx.font=`300 84px ${FONT}`;ctx.textBaseline='middle';ctx.letterSpacing='4px';ctx.textAlign='right';ctx.fillStyle=pal[1];ctx.fillText(String(a),CX-50,1640);ctx.textAlign='left';ctx.fillStyle=pal[2];ctx.fillText(String(b),CX+50,1640);
     ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText('·',CX,1640);ctx.font=`500 40px ${FONT}`;ctx.letterSpacing='8px';ctx.fillStyle=pal[1];ctx.textAlign='right';ctx.fillText('LILAC',CX-50,1740);ctx.textAlign='left';ctx.fillStyle=pal[2];ctx.fillText('PINK',CX+50,1740);ctx.letterSpacing='0px';ctx.textAlign='center';
-    if(this.state==='full')big(a>=b?'LILAC WINS':'PINK WINS',CY-560,80,a>=b?pal[1]:pal[2]);},
+    // égalité : pas de faux vainqueur
+    if(this.state==='full')popBig(a===b?'TIE!':a>b?'LILAC WINS':'PINK WINS',CY-560,80,a===b?'#ffffff':a>b?pal[1]:pal[2]);},
   info(){let a=0,b=0;for(let i=0;i<this.n;i++){if(this.C[i]===1)a++;else if(this.C[i]===2)b++;}return{state:this.state,n:this.n,crushed:this.crushed,gap:Math.abs(a-b),dur:+this.t.toFixed(1)};}
 };
 
