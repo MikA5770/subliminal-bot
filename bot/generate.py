@@ -173,13 +173,13 @@ def render(page, mode, seed, opts, out_mp4, hue_shift):
     return dur
 
 
-def captions(mode, ep, opts, info):
-    m = MODES[mode]
+def captions(mode, ep, opts, info, override=None):
+    # Une battle d'actualité remplace le mot-clé, la question et les hashtags (noms des combattants)
+    m = dict(MODES[mode], **(override or {}))
     question = m["question"]
-    if mode == "war":
-        question = "Which color did you pick? Comment it below"
+    tags = list(dict.fromkeys((override or {}).get("tags", []) + MODES[mode]["tags"]))
     # Les mots-clés recherchés en première ligne (référencement), puis la série et la question
-    caption = f"{m['keyword']} | {m['series']} Nº{ep}\n\n{question}\n\n" + " ".join(m["tags"])
+    caption = f"{m['keyword']} | {m['series']} Nº{ep}\n\n{question}\n\n" + " ".join(tags)
     title = f"{m['keyword']} | {m['series']} Nº{ep}"
     return caption, title[:92] + " #shorts"
 
@@ -194,26 +194,35 @@ def main():
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     state = load_state()
+    # Les battles passent uniquement par battles.json : une idée « battle » n'a pas de combattants
     pending = [it for it in (json.loads(IDEAS.read_text()) if IDEAS.exists() else [])
-               if not it.get("used") and it.get("mode") in MODES and it.get("by")]
+               if not it.get("used") and it.get("mode") in MODES and it.get("mode") != "battle" and it.get("by")]
     battle = None if a.mode and a.mode != "battle" else due_battle(state, forced=a.mode == "battle")
     forced = a.mode or ("battle" if battle else None) or next((it["mode"] for it in pending if it["mode"] not in state["history"][-1:]), None)
     mode = pick_mode(state, forced)
+    if mode == "battle":
+        if not battle:
+            raise SystemExit("Aucune battle à publier dans battles.json (toutes utilisées ou fichier vide)")
+        names = [str(f.get("name", "")).strip() for f in battle.get("fighters", [])]
+        if not 2 <= len(names) <= 6 or not all(names):
+            raise SystemExit(f"Battle « {battle.get('title', '')} » : il faut de 2 à 6 combattants, chacun avec un nom")
     opts = pick_options(mode, state)
+    ep = state["episodes"].get(mode, 0) + 1
+    opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep, mode)})
     override = None
-    if mode == "battle" and battle:
-        names = [f["name"] for f in battle["fighters"]]
+    if mode == "battle":
         opts["battle"] = {"title": battle.get("title", ""), "fighters": battle["fighters"]}
         opts["hook"] = battle.get("hook") or f"{' vs '.join(names)}. Pick a side before it starts"
+        # Appel à l'action propre aux battles (posé après celui par défaut pour ne pas être écrasé)
         opts["cta"] = random.choice(["Who were you rooting for?", "Rematch? Comment below", "Was it fair? Comment"])
         override = {"keyword": battle.get("keyword") or f"{' vs '.join(names)} ball battle simulation",
                     "question": battle.get("question", "Who were you rooting for?"),
                     "tags": battle.get("tags", [])}
-    ep = state["episodes"].get(mode, 0) + 1
-    opts.update({"ep": ep, "handle": HANDLE, "cta": end_cta(ep)})
     idea = None if mode == "battle" else take_idea(mode)
     if idea:
-        opts["credit"] = f"Idea by {idea['by']}"
+        by = str(idea["by"]).strip()
+        by = by if by.startswith("@") else "@" + by
+        opts["credit"] = f"Idea by {by}"
         if idea.get("hook"):
             opts["hook"] = idea["hook"]
     t0 = time.time()
@@ -243,13 +252,13 @@ def main():
         if errors:
             raise RuntimeError("Erreurs dans le moteur : " + "; ".join(errors))
 
-    caption, title = captions(mode, ep, opts, info)
+    caption, title = captions(mode, ep, opts, info, override)
     post = {"mode": mode, "episode": ep, "seed": seed, "options": opts, "hue": hue, "duration": round(dur, 1),
             "result": info, "file": mp4.name, "caption": caption, "title": title,
             "files": files, "captions": platform_captions(mode, ep, opts["hook"], override)}
     if idea:
         for k in post["captions"]:
-            post["captions"][k] = post["captions"][k].replace("\n\n", f"\n\nIdea by {idea['by']} 💜 Drop yours in the comments.\n\n", 1)
+            post["captions"][k] = post["captions"][k].replace("\n\n", f"\n\n{opts['credit']} 💜 Drop yours in the comments.\n\n", 1)
     (out / "post.json").write_text(json.dumps(post, indent=2, ensure_ascii=False))
 
     if not a.no_state:

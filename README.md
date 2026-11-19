@@ -4,7 +4,7 @@ Deux fois par jour, ce robot crée une nouvelle vidéo « satisfaisante », puis
 
 ## Ce que fait chaque passage
 
-1. **Choix du format.** Le robot prend l'un des 10 formats, jamais un des 3 derniers publiés. Il favorise ceux qui ont été le moins utilisés.
+1. **Choix du format.** Le robot prend l'un des 15 formats (les battles d'actualité passent à part, voir plus bas), jamais un des 3 derniers publiés. Il favorise ceux qui ont été le moins utilisés.
 2. **Variation.** Il tire au hasard l'accroche, l'instrument, la mélodie, le mot secret (mode Mystery) et parfois les couleurs.
 3. **Contrôle qualité.** Il simule jusqu'à 40 parties et garde la plus intéressante : victoire de justesse, Color War serrée sans égalité, durée correcte.
 4. **Vidéo.** Il fabrique le MP4 en 1080 × 1920, avec le son et le numéro d'épisode de la série.
@@ -42,7 +42,7 @@ Quand un abonné propose une idée en commentaire, ajoute-la dans `ideas.json` :
 ```json
 [{"mode": "split", "by": "@pseudo", "hook": "Optionnel : accroche proposée"}]
 ```
-La prochaine vidéo prend ce format, affiche « IDEA BY @PSEUDO » sous l'accroche et le crédite dans la légende. L'idée est ensuite marquée `"used": true`.
+La prochaine vidéo prend ce format, affiche « IDEA BY @PSEUDO » sous l'accroche et le crédite dans la légende (le « @ » est ajouté s'il manque). L'idée est ensuite marquée `"used": true`. Les battles ne passent pas par `ideas.json` (il leur faut des combattants) : utilise `battles.json`.
 
 Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, battle.
 
@@ -51,7 +51,7 @@ Ajoute une affiche avec sa date ; le robot la publie entre 2 jours avant et le j
 ```json
 {"date": "2026-12-12", "title": "UFC 335", "tags": ["#ufc335"], "fighters": [{"name": "Oliveira"}, {"name": "Lopes"}]}
 ```
-Champs facultatifs : `hook`, `keyword`, `question`, `color` par combattant. Noms seulement : pas de photos ni de logos.
+Champs facultatifs : `hook`, `keyword`, `question`, `color` par combattant (couleur CSS, sinon la palette par défaut). De 2 à 6 combattants, noms seulement : pas de photos ni de logos. Forcer `--mode battle` sans battle disponible arrête le passage avec un message clair (plus de vidéo « démo »).
 
 ## Identifiant en fond de vidéo
 Dans `.github/workflows/publish.yml` : `HANDLE_TIKTOK`, `HANDLE_INSTAGRAM`, `HANDLE_YOUTUBE` (vide = pas d'identifiant).

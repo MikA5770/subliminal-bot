@@ -89,13 +89,13 @@ MODES = {
     },
     "bricks": {
         "series": "Walls", "keyword": "Satisfying ball breaks every brick wall",
-        "hooks": ["One bounce. One brick. Until the walls are gone", "60 bricks. One ball. No way out", "Watch the box disappear"],
+        "hooks": ["One bounce. One brick. Until the walls are gone", "52 bricks. One ball. No way out", "Watch the box disappear"],
         "question": "Which brick did you think would be the last?",
         "tags": ["#satisfying", "#brickbreaker", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 25, "max": 58,
     },
     "split": {
-        "series": "Splinter", "keyword": "Satisfying bar snaps into thousands of pieces",
+        "series": "Splinter", "keyword": "Satisfying falling bar snaps in half on every bounce",
         "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
         "question": "How many pieces did you guess?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
@@ -152,12 +152,16 @@ def interesting(mode, info):
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
     if mode == "crusher":
-        return 8 + (1 if info["gap"] <= 40 else 0) if info["state"] == "full" and info["n"] >= 600 else None
+        # Pas d'égalité : la couleur gagnante affichée doit être indiscutable
+        if info["state"] != "full" or info["n"] < 600 or info["gap"] < 2:
+            return None
+        return 8 + (1 if info["gap"] <= 40 else 0)
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
-        # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires)
-        return 10 - info["hp"] / 10 if info["state"] == "win" else None
+        # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires),
+        # sans duel qui s'éternise (au-delà de 40 s le score baisse)
+        return 10 - info["hp"] / 10 - max(0, d - 40) / 5 if info["state"] == "win" else None
     if mode in ("pendulum", "bricks", "split"):
         if info["state"] not in ("done", "clear"):
             return None
@@ -231,10 +235,19 @@ def platform_captions(mode, ep, hook, override=None):
 # et le commentaire par une question à laquelle on a envie de répondre.
 CTA = {
     "follow": ["Follow for Nº{next}", "Nº{next} tomorrow"],
-    "comment": ["Did you guess right?", "Suggest the next one below"],
+    "comment": ["Suggest the next one below"],
+}
+# Question de fin qui colle à ce que la vidéo a demandé (« Did you guess right? » n'a pas de sens
+# après une vidéo où l'on n'a rien deviné, comme Multiply ou Trail)
+CTA_COMMENT = {
+    "grow": "Did you guess right?", "split": "Did you guess right?", "overflow": "Did you guess right?",
+    "pendulum": "Did you guess right?", "reveal": "At what % did you read it?", "piano": "Did you name it in time?",
+    "war": "Did your color win?", "crusher": "Did your color win?", "flags": "Did your country win?",
+    "rings": "Did you think it would make it?", "maze": "Did you think it would make it?",
 }
 
 
-def end_cta(ep):
+def end_cta(ep, mode=None):
     kind = _r.choice(["follow", "follow", "comment"])
-    return _r.choice(CTA[kind]).format(next=ep + 1)
+    options = CTA[kind] + ([CTA_COMMENT[mode]] if kind == "comment" and mode in CTA_COMMENT else [])
+    return _r.choice(options).format(next=ep + 1)
