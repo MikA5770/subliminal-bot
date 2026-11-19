@@ -310,14 +310,18 @@ sims.trail={name:'4 · Speed tube',hook:'It speeds up every bounce... until it b
     if(this.state!=='play')return;
     const d=Math.hypot(b.x-CX,b.y-CY);
     if(d+b.r>=this.R&&reflect(b,CX,CY,this.R,1.025)){keepSpeed(b,600,4000);this.n++;this.hue+=27;snd('n',imp(b));
-      if(Math.hypot(b.vx,b.vy)>=3950||this.t>50){this.state='break';this.end=3.5;ringBurst(CX,CY,this.R,262,260);snd('s',1,0);snd('f',1,0);}}
+      if(Math.hypot(b.vx,b.vy)>=3950||this.t>50){this.state='break';this.end=3.5;this.vEnd=Math.hypot(b.vx,b.vy);ringBurst(CX,CY,this.R,262,260);snd('s',1,0);snd('f',1,0);}}
     this.hue+=dt*40;const x=this.tx;x.beginPath();x.arc(b.x,b.y,b.r,0,TAU);x.lineWidth=2;x.strokeStyle=`hsla(${262+Math.sin(this.hue/40)*22},70%,${60+Math.sin(this.hue/13)*28}%,.6)`;x.stroke();
   },
-  draw(){ctx.drawImage(this.tc,0,0);const b=this.b,h=this.hue%360;
+  draw(){const b=this.b,k=sinceEnd();
+    // après la casse, le dessin s'assombrit pour laisser toute la place au titre final
+    ctx.globalAlpha=this.state==='play'?1:1-.6*clamp(k/.5,0,1);ctx.drawImage(this.tc,0,0);ctx.globalAlpha=1;
     if(this.state==='play'){ctx.beginPath();ctx.arc(CX,CY,this.R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18;ctx.stroke();ctx.shadowBlur=0;}
     glowBall(b.x,b.y,b.r,'#ffffff',40);
-    big(`x${(Math.hypot(b.vx,b.vy)/1000).toFixed(1)}`,1640,110);big('SPEED',1750,44,'rgba(255,255,255,.5)');
-    if(this.state==='break')big('BROKE FREE!',CY,120,'#fff');
+    // vitesse figée au moment de la casse (la balle sort ensuite du cadre)
+    const v=this.state==='play'?Math.hypot(b.vx,b.vy):this.vEnd;
+    big(`x${(v/1000).toFixed(1)}`,1640,110);big('SPEED',1750,44,'rgba(255,255,255,.5)');
+    if(this.state==='break')popBig('BROKE FREE!',CY,120,'#fff');
   },
   info(){return{state:this.state,n:this.n,t:+this.t.toFixed(1)};}
 };
@@ -534,18 +538,22 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
   },
   seg(t){let s=this.segs[0];for(const x of this.segs){if(x.t<=t)s=x;else break;}return s;},
   step(dt){this.t+=dt;const t=this.t;
-    for(const p of this.panes)if(!p.broken&&t>=p.t){p.broken=true;this.broken++;snd('n',1,0);snd('s',.35,.03);
-      for(let i=0;i<7;i++){const a=rnd(0,TAU),s=rnd(120,520);this.shards.push({x:p.c.x+Math.cos(p.ang)*rnd(-40,40),y:p.c.y+Math.sin(p.ang)*rnd(-40,40),vx:Math.cos(a)*s,vy:Math.sin(a)*s-200,a:p.ang+rnd(-1,1),va:rnd(-9,9),l:rnd(10,26),life:1});}}
+    const lastT=this.N?this.panes[this.N-1].t:0;
+    for(const p of this.panes)if(!p.broken&&t>=p.t){p.broken=true;this.broken++;snd('n',1,0);const fin=this.broken===this.N;snd('s',fin?.9:.35,fin?0:.03);
+      // la dernière vitre éclate plus fort : c'est le moment final
+      for(let i=0;i<(fin?24:7);i++){const a=rnd(0,TAU),s=rnd(120,fin?820:520);this.shards.push({x:p.c.x+Math.cos(p.ang)*rnd(-40,40),y:p.c.y+Math.sin(p.ang)*rnd(-40,40),vx:Math.cos(a)*s,vy:Math.sin(a)*s-200,a:p.ang+rnd(-1,1),va:rnd(-9,9),l:rnd(10,fin?34:26),life:1});}}
     for(const s of this.shards){s.vy+=1600*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;s.a+=s.va*dt;s.life-=dt*.9;}
     this.shards=this.shards.filter(s=>s.life>0);
     const b=this.posAt(this.seg(t),t);this.b=b;
-    this.cam+=(b.y+330-this.cam)*Math.min(1,dt*3.2);
+    // la caméra suit la balle jusqu'à la dernière vitre, puis s'arrête et la laisse sortir du cadre
+    if(t<lastT+.2)this.cam+=(b.y+300-this.cam)*Math.min(1,dt*3.2);
     this.tr.push(b.x,b.y);if(this.tr.length>36)this.tr.splice(0,2);
-    if(this.state==='play'&&this.broken>=this.N&&t>(this.N?this.panes[this.N-1].t:0)+1.2){this.state='done';this.end=3.2;snd('f',1,0);}
+    if(this.state==='play'&&this.broken>=this.N&&t>lastT+.6){this.state='done';this.end=3.2;snd('f',1,0);}
   },
   draw(){const ox=CX,oy=CY-this.cam;
-    ctx.strokeStyle='rgba(228,220,255,.35)';ctx.lineWidth=2;for(const sx of[-this.WALL,this.WALL]){ctx.beginPath();ctx.moveTo(ox+sx,0);ctx.lineTo(ox+sx,H);ctx.stroke();}
-    for(const p of this.panes){if(p.broken)continue;const y=oy+p.c.y;if(y<-120||y>H+120)continue;
+    // murs et vitres sur toute la hauteur de l'écran (la zone de jeu réduite s'arrêtait à 87 %)
+    ctx.strokeStyle='rgba(228,220,255,.35)';ctx.lineWidth=2;for(const sx of[-this.WALL,this.WALL]){ctx.beginPath();ctx.moveTo(ox+sx,-120);ctx.lineTo(ox+sx,H+360);ctx.stroke();}
+    for(const p of this.panes){if(p.broken)continue;const y=oy+p.c.y;if(y<-160||y>H+380)continue;
       ctx.save();ctx.translate(ox+p.c.x,y);ctx.rotate(p.ang);
       ctx.fillStyle='rgba(196,181,253,.3)';ctx.fillRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
       ctx.strokeStyle='rgba(228,220,255,.85)';ctx.lineWidth=1.5;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.strokeRect(-this.PL/2,-this.TH/2,this.PL,this.TH);
@@ -555,8 +563,8 @@ sims.glass={name:'10 · Glass ricochet',hook:'One ball. Every pane is a note',in
     ctx.globalAlpha=1;
     const tr=this.tr;for(let i=0;i<tr.length;i+=2){const k=i/tr.length;ctx.beginPath();ctx.arc(ox+tr[i],oy+tr[i+1],this.R*k,0,TAU);ctx.fillStyle=`rgba(200,180,255,${k*.45})`;ctx.fill();}
     if(this.b)glowBall(ox+this.b.x,oy+this.b.y,this.R,'#ffffff',30);
-    big(`${this.broken} / ${this.N}`,470,90);big('PANES BROKEN',545,30,'rgba(255,255,255,.5)');
-    if(this.state==='done')big('ALL OF THEM',CY+120,90,'#ffffff');
+    bigBump('n',this.broken,`${this.broken} / ${this.N}`,525,90);big('PANES BROKEN',598,30,'rgba(255,255,255,.5)');
+    if(this.state==='done')popBig('ALL OF THEM',CY+120,90,'#ffffff');
   },
   info(){return{state:this.state,n:this.N,broken:this.broken};}
 };
