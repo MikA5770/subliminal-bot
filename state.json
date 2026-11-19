@@ -3,13 +3,15 @@
     "multiply",
     "grow",
     "battle",
-    "pendulum"
+    "pendulum",
+    "flags"
   ],
   "episodes": {
     "multiply": 1,
     "grow": 1,
     "battle": 1,
-    "pendulum": 1
+    "pendulum": 1,
+    "flags": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
