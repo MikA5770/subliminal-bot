@@ -2,12 +2,14 @@
   "history": [
     "multiply",
     "grow",
-    "battle"
+    "battle",
+    "pendulum"
   ],
   "episodes": {
     "multiply": 1,
     "grow": 1,
-    "battle": 1
+    "battle": 1,
+    "pendulum": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
