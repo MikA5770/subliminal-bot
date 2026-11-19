@@ -386,12 +386,15 @@ sims.reveal={name:'6 · Mystery reveal',hook:'Guess the word before it is fully 
   },
   draw(){
     ctx.lineWidth=2;ctx.strokeStyle='rgba(228,220,255,.7)';ctx.beginPath();ctx.roundRect(this.X0-6,this.Y0-6,this.X1-this.X0+12,this.Y1-this.Y0+12,24);ctx.stroke();
+    // la trace du pinceau reste dans le cadre (elle débordait de 24 px sur les bords)
+    ctx.save();ctx.beginPath();ctx.rect(this.X0,this.Y0,this.X1-this.X0,this.Y1-this.Y0);ctx.clip();
     ctx.globalAlpha=.12;ctx.drawImage(this.mask,0,0);ctx.globalAlpha=1;
     const t=this.tmp.getContext('2d');t.globalCompositeOperation='source-over';t.clearRect(0,0,W,H);t.drawImage(this.mask,0,0);t.globalCompositeOperation='source-in';t.drawImage(this.pic,0,0);t.globalCompositeOperation='source-over';
     ctx.drawImage(this.tmp,0,0);
-    if(this.state==='done'){ctx.globalAlpha=clamp((3.5-this.end)/.6,0,1);ctx.drawImage(this.pic,0,0);ctx.globalAlpha=1;}
+    if(this.state==='done'){ctx.globalAlpha=clamp(sinceEnd()/.6,0,1);ctx.drawImage(this.pic,0,0);ctx.globalAlpha=1;}
+    ctx.restore();
     for(const b of this.balls)glowBall(b.x,b.y,b.r,'#fff',18);
-    if(this.state==='done')big('DID YOU GET IT?',1720,64,'#ffffff');
+    if(this.state==='done')popBig('DID YOU GET IT?',1720,64,'#ffffff');
     else big(`${Math.floor(this.covered/this.total*100)}% REVEALED`,1720,60);
   },
   info(){return{state:this.state,pct:Math.round(this.covered/this.total*100),t:+this.t.toFixed(1),balls:this.balls.length};}
@@ -492,9 +495,10 @@ sims.piano={name:'9 · Name the song',hook:'Every bounce plays the next note. Na
     ctx.shadowBlur=0;
     if(this.state==='play'&&lastNote>=0){ctx.globalAlpha=.3;big(NN[lastNote%12],CY,300,'#c4b5fd');ctx.globalAlpha=1;}
     glowBall(this.b.x,this.b.y,this.b.r,'#fff');
-    if(this.state==='done'){big(SONG[melName],CY-40,100,'#ffffff');if(BY[melName])big(BY[melName],CY+70,56,'#fff');big('Comment the next song!',1720,58,'#ffffff');}
+    // titre long (« Mary had a little lamb »…) : sur deux lignes au lieu d'être écrasé
+    if(this.state==='done'){popBig(SONG[melName],CY-60,100,'#ffffff');if(BY[melName])popBig(BY[melName],CY+100,56,'#fff');big('Comment the next song!',1720,58,'#ffffff');}
     else{ctx.fillStyle='#1d1630';ctx.fillRect(190,1628,700,6);ctx.fillStyle='#c4b5fd';ctx.fillRect(190,1628,700*this.played/this.total,6);
-      big(`NOTE ${this.played} / ${this.total}`,1720,52,'rgba(255,255,255,.5)');}},
+      bigBump('n',this.played,`NOTE ${this.played} / ${this.total}`,1720,52,'rgba(255,255,255,.5)');}},
   info(){return{state:this.state,played:this.played};}
 };
 
@@ -624,8 +628,8 @@ sims.pendulum={name:'11 · Pendulum weld',hook:'Every block it touches sticks',i
       ctx.save();ctx.globalAlpha=vis;ctx.translate(x,y);ctx.rotate(r);ctx.fillStyle=b.on?'rgba(228,220,255,.85)':'rgba(196,181,253,.28)';ctx.strokeStyle=b.on?'#ffffff':'rgba(228,220,255,.8)';
       ctx.lineWidth=1.5;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=b.on?14:6;ctx.fillRect(-12,-12,24,24);ctx.strokeRect(-12,-12,24,24);ctx.restore();}
     glowBall(p.x2,p.y2,13,'#ffffff',22);
-    big(`${this.n} WELDED`,1640,80);
-    if(this.state==='done')big('ALL OF THEM',CY-560,80,'#ffffff');
+    bigBump('n',this.n,`${this.n} WELDED`,1640,80);
+    if(this.state==='done')popBig('ALL OF THEM',CY-560,80,'#ffffff');
   },
   info(){return{state:this.state,n:this.blocks.length,dur:+this.t.toFixed(1)};}
 };
@@ -652,7 +656,7 @@ sims.bricks={name:'12 · Brick box',hook:'One bounce. One brick. Until the walls
         const vn=b.vx*px+b.vy*py;if(vn<0){b.vx-=2*vn*px;b.vy-=2*vn*py;}
         q.alive=false;this.left--;b.r+=.45;snd('n',1,0);burst(nx,ny,262,10,300);
         this.deb.push({x:q.x+q.w/2,y:q.y+q.h/2,w:q.w,h:q.h,vx:-px*rnd(100,260)+rnd(-60,60),vy:-py*rnd(100,260)-150,a:0,va:rnd(-5,5)});
-        if(this.left===0){this.state='clear';this.end=2.2;snd('f',1,0);burst(b.x,b.y,262,80,900);}
+        if(this.left===0){this.state='clear';this.end=3;snd('f',1,0);snd('s',.8,0);burst(b.x,b.y,262,140,1200);}
         break;}
       if(this.t>75){this.state='clear';this.end=2.2;}
     }
@@ -665,8 +669,8 @@ sims.bricks={name:'12 · Brick box',hook:'One bounce. One brick. Until the walls
     ctx.shadowBlur=0;
     for(const d of this.deb){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.a);ctx.strokeStyle='rgba(228,220,255,.6)';ctx.lineWidth=1.5;ctx.strokeRect(-d.w/2+2,-d.h/2+2,d.w-4,d.h-4);ctx.restore();}
     glowBall(this.b.x,this.b.y,this.b.r,'#ffffff',26);
-    big(String(this.left),1640,110);big('BRICKS LEFT',1750,46,'rgba(255,255,255,.5)');
-    if(this.state==='clear')big(this.left===0?'EVERY SINGLE ONE':`${this.left} LEFT`,CY-620,70,'#ffffff');
+    bigBump('n',this.left,String(this.left),1640,110);big(this.left===1?'BRICK LEFT':'BRICKS LEFT',1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='clear')popBig(this.left===0?'EVERY SINGLE ONE':`${this.left} LEFT`,CY,84,'#ffffff');
   },
   info(){return{state:this.state,left:this.left,n:this.total-this.left};}
 };
@@ -699,7 +703,7 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
         else{b.vy=-b.vy*rnd(.2,.3);b.vx*=.6;b.w*=.4;if(Math.abs(b.vy)<120){b.dead=true;this.settle(b);snd('b',.25,.08);}}}}
     if(add.length||this.bars.some(b=>b.dead))this.bars=this.bars.filter(b=>!b.dead).concat(add);},
   step(dt){this.t+=dt;this.acc+=dt*.72;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
-    if(this.state==='play'&&this.bars.length===0&&this.t>4){this.state='done';this.end=2.2;snd('f',1,0);}
+    if(this.state==='play'&&this.bars.length===0&&this.t>4){this.state='done';this.end=3;snd('f',1,0);burst(CX,this.FL-30,262,90,900);}
     if(this.t>70&&this.state==='play'){this.state='done';this.end=3;}},
   col(L){const g=Math.log2(840/L);return`hsl(258,75%,${92-Math.min(14,g*2.5)}%)`;},
   draw(){ctx.strokeStyle='rgba(228,220,255,.55)';ctx.lineWidth=2;ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);
@@ -707,8 +711,10 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
     for(const r of this.rest){ctx.fillStyle=this.col(r.L);ctx.fillRect(r.x-r.w/2+.5,r.y-r.h/2+.5,r.w-1,r.h-1);}
     for(const b of this.bars){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=this.col(b.L);const w=Math.max(8,b.L),h=this.TH;ctx.fillRect(-w/2,-h/2,w,h);ctx.restore();}
     ctx.shadowBlur=0;
-    big(`${fmtN(this.count())} ${this.count()===1?'PIECE':'PIECES'}`,1640,100);
-    if(!this.bars.length)big('ALL SETTLED',1750,46,'rgba(255,255,255,.5)');},
+    const n=this.count();
+    // la réponse à « combien de morceaux ? » passe en grand au centre une fois tout posé
+    if(this.state==='done'){popBig(`${fmtN(n)} PIECES`,CY-160,110,'#ffffff');big('FROM ONE BAR',1690,50,'rgba(255,255,255,.55)');}
+    else{bigBump('n',n,`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);if(!this.bars.length)big('ALL SETTLED',1750,46,'rgba(255,255,255,.5)');}},
   info(){return{state:this.state,n:this.count(),dur:+this.t.toFixed(1)};}
 };
 
