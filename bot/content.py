@@ -159,8 +159,9 @@ def interesting(mode, info):
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
-        # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires)
-        return 10 - info["hp"] / 10 if info["state"] == "win" else None
+        # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires),
+        # sans duel qui s'éternise (au-delà de 40 s le score baisse)
+        return 10 - info["hp"] / 10 - max(0, d - 40) / 5 if info["state"] == "win" else None
     if mode in ("pendulum", "bricks", "split"):
         if info["state"] not in ("done", "clear"):
             return None
