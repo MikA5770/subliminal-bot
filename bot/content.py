@@ -89,13 +89,13 @@ MODES = {
     },
     "bricks": {
         "series": "Walls", "keyword": "Satisfying ball breaks every brick wall",
-        "hooks": ["One bounce. One brick. Until the walls are gone", "60 bricks. One ball. No way out", "Watch the box disappear"],
+        "hooks": ["One bounce. One brick. Until the walls are gone", "52 bricks. One ball. No way out", "Watch the box disappear"],
         "question": "Which brick did you think would be the last?",
         "tags": ["#satisfying", "#brickbreaker", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 25, "max": 58,
     },
     "split": {
-        "series": "Splinter", "keyword": "Satisfying bar snaps into thousands of pieces",
+        "series": "Splinter", "keyword": "Satisfying falling bar snaps in half on every bounce",
         "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
         "question": "How many pieces did you guess?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
@@ -152,7 +152,10 @@ def interesting(mode, info):
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
     if mode == "crusher":
-        return 8 + (1 if info["gap"] <= 40 else 0) if info["state"] == "full" and info["n"] >= 600 else None
+        # Pas d'égalité : la couleur gagnante affichée doit être indiscutable
+        if info["state"] != "full" or info["n"] < 600 or info["gap"] < 2:
+            return None
+        return 8 + (1 if info["gap"] <= 40 else 0)
     if mode == "bricks":
         return 8 - d / 20 if info["state"] == "clear" and info["left"] == 0 else None
     if mode == "battle":
