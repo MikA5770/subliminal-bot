@@ -812,23 +812,33 @@ sims.battle={name:'15 · Battle',hook:'Pick a side before it starts',inst:'marim
 };
 
 /* ---------- Format : la presse qui duplique ---------- */
+// Deux bras montés sur un moyeu central. Cycle : les bras tournent vers un nouvel endroit, puis chacun à son tour
+// plaque sa presse contre la paroi. Toute bille coincée entre la presse et la paroi éclate et revient en deux billes de sa couleur.
 sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes back as two',inst:'marimba',mel:'run',
-  init(){const R=440,r=17,CAP=640,N=CAP+80;
+  init(){const R=440,r=17,CAP=640,N=CAP+120,HW=10,HUB=52;
     const pal=['#ece6ff','#a78bfa','#f0abfc'];
-    Object.assign(this,{R,r,CAP,pal,X:new Float32Array(N),Y:new Float32Array(N),PX:new Float32Array(N),PY:new Float32Array(N),C:new Uint8Array(N),F:new Float32Array(N),IM:new Float32Array(N),
-      n:0,crushed:0,t:0,acc:0,state:"play",gen:0,ZONE:100,
-      jaws:[{px:CX-R,py:CY,a0:rnd(0,TAU),w:rnd(1.1,1.35),a:125,L:240,col:1,name:'LILAC'},{px:CX+R,py:CY,a0:rnd(0,TAU),w:-rnd(1.1,1.35),a:125,L:240,col:2,name:'PINK'}]});
-    for(let i=0;i<16;i++){const a=i/16*TAU,d=i%2?40:0;this.add(CX+Math.cos(a)*(d+38),CY+Math.sin(a)*(d+38),0,Math.cos(a)*rnd(3,5),Math.sin(a)*rnd(3,5));}},
-  add(x,y,c,vx=0,vy=0){const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx;this.PY[i]=y-vy;this.C[i]=c;this.F[i]=1;this.IM[i]=.4;},
-  // la mâchoire balaie l'intérieur de l'anneau d'avant en arrière (bielle sur l'engrenage qui tourne) :
-  // elle ne sort plus du cadre de la vidéo et écrase en continu (parties de 35 à 45 s au lieu de 60 à 70 s)
-  ang(j){return(j.col===1?0:Math.PI)+1.3*Math.sin(j.a0+j.w*this.t);},
-  segs(){const out=[];for(const j of this.jaws){const th=this.ang(j),c=Math.cos(th),s=Math.sin(th);
-      const P=(x,y)=>[j.px+x*c-y*s,j.py+x*s+y*c];
-      const p1=P(j.L,-j.a),p2=P(0,-j.a),p3=P(0,j.a),p4=P(j.L,j.a);
-      out.push([...p1,...p2],[...p2,...p3],[...p3,...p4]);}
+    const first=rand()<.5?0:1;
+    Object.assign(this,{R,r,CAP,HW,HUB,pal,X:new Float32Array(N),Y:new Float32Array(N),PX:new Float32Array(N),PY:new Float32Array(N),C:new Uint8Array(N),F:new Float32Array(N),IM:new Float32Array(N),
+      n:0,crushed:0,t:0,acc:0,state:"play",
+      P:rnd(1.5,1.7),th0:rnd(0,TAU),stepA:rnd(.62,.8)*(rand()<.5?1:-1),
+      B:.42,Rin:R-230,Rout:R-HW-r*1.15,
+      // ordre de frappe tiré au sort : aucune couleur n'a l'avantage de frapper en premier
+      arms:[{col:1,off:0,s0:first?.55:.30,name:'LILAC',hit:-1,flash:0},{col:2,off:Math.PI,s0:first?.30:.55,name:'PINK',hit:-1,flash:0}]});
+    for(let i=0;i<28;i++){const a=i/28*TAU,d=i%2?170:120;this.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,0,Math.cos(a+1.2)*rnd(3,5),Math.sin(a+1.2)*rnd(3,5));}},
+  add(x,y,c,vx=0,vy=0){const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx;this.PY[i]=y-vy;this.C[i]=c;this.F[i]=1;this.IM[i]=.45;},
+  // rotation des bras pendant les phases où les deux presses sont rentrées (u de .95 à 1.30), arrêt pendant les frappes
+  ang(arm){const c=this.t/this.P,k=Math.floor(c),u=c-k,m=u>=.95?(u-.95)/.35:u<.30?(u+.05)/.35:u<.95?1:0;
+    const e=m*m*(3-2*m),g=u>=.95?k+e:k-1+e;return this.th0+arm.off+this.stepA*g;},
+  // rayon de la presse : repos, frappe qui accélère, maintien contre la paroi, retour en douceur
+  rad(arm){const u=(this.t/this.P)%1,v=u-arm.s0,{Rin,Rout}=this;
+    if(v<0||v>=.40)return Rin;if(v<.12){const p=v/.12;return Rin+(Rout-Rin)*p*p;}
+    if(v<.20)return Rout;const p=(v-.20)/.20;return Rout-(Rout-Rin)*p*p*(3-2*p);},
+  // presse = chaîne de capsules le long d'un arc + tige jusqu'au moyeu
+  segs(){const out=[];for(const arm of this.arms){const th=this.ang(arm),rh=this.rad(arm),B=this.B,K=8;
+      for(let k=0;k<K;k++){const a0=th-B+2*B*k/K,a1=th-B+2*B*(k+1)/K;out.push([CX+Math.cos(a0)*rh,CY+Math.sin(a0)*rh,CX+Math.cos(a1)*rh,CY+Math.sin(a1)*rh,this.HW]);}
+      out.push([CX+Math.cos(th)*this.HUB,CY+Math.sin(th)*this.HUB,CX+Math.cos(th)*(rh-this.HW),CY+Math.sin(th)*(rh-this.HW),8]);}
     return out;},
-  phys(dt){const{X,Y,PX,PY,R,r}=this,n=this.n,S=this.segs(),D=2*r,AW=12;
+  phys(dt){const{X,Y,PX,PY,R,r}=this,n=this.n,S=this.segs(),D=2*r;
     for(let i=0;i<n;i++){let vx=(X[i]-PX[i])*.996,vy=(Y[i]-PY[i])*.996;const sp=Math.hypot(vx,vy),mn=n<300?2.6:.9;if(sp<mn){if(sp<.02){const q=rand()*TAU;vx=Math.cos(q)*mn;vy=Math.sin(q)*mn;}else{vx*=mn/sp;vy*=mn/sp;}}if(sp>12){vx*=12/sp;vy*=12/sp;}PX[i]=X[i];PY[i]=Y[i];X[i]+=vx;Y[i]+=vy;}
     const cs=D,gw=Math.ceil(2*R/cs)+2,gx0=CX-R-cs,gy0=CY-R-cs,head=new Int32Array(gw*gw),next=new Int32Array(n);
     for(let it=0;it<4;it++){head.fill(-1);
@@ -838,40 +848,55 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
           for(let j=head[cy*gw+cx];j>=0;j=next[j]){if(j<=i)continue;const dx=X[j]-X[i],dy=Y[j]-Y[i],d2=dx*dx+dy*dy;if(d2>=D*D||d2<1e-6)continue;
             const d=Math.sqrt(d2),c=(D-d)/d*.5;X[i]-=dx*c;Y[i]-=dy*c;X[j]+=dx*c;Y[j]+=dy*c;}}}
       for(let i=0;i<n;i++){
-        for(const[a,b,c,e]of S){const sx=c-a,sy=e-b,l2=sx*sx+sy*sy,u=clamp(((X[i]-a)*sx+(Y[i]-b)*sy)/l2,0,1),qx=a+sx*u,qy=b+sy*u,dx=X[i]-qx,dy=Y[i]-qy,d=Math.hypot(dx,dy),m=r+AW/2;
+        for(const[a,b,c,e,w]of S){const sx=c-a,sy=e-b,l2=sx*sx+sy*sy,u=clamp(((X[i]-a)*sx+(Y[i]-b)*sy)/l2,0,1),qx=a+sx*u,qy=b+sy*u,dx=X[i]-qx,dy=Y[i]-qy,d=Math.hypot(dx,dy),m=r+w;
           if(d<m&&d>1e-4){X[i]+=dx/d*(m-d);Y[i]+=dy/d*(m-d);}}
-        const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d>R-r){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}}
-    // écrasée : la mâchoire la pousse contre l'anneau et elle ne peut plus s'échapper
+        let dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);
+        if(d<this.HUB+r&&d>1e-4){X[i]=CX+dx/d*(this.HUB+r);Y[i]=CY+dy/d*(this.HUB+r);dx=X[i]-CX;dy=Y[i]-CY;d=this.HUB+r;}
+        if(d>R-r){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}}
     if(this.state!=='play')return;
+    // écrasement : la presse est assez près de la paroi pour qu'une bille n'y tienne plus
     const crush=[];
-    for(let i=0;i<n;i++){if(this.IM[i]>0||Math.hypot(X[i]-CX,Y[i]-CY)<R-this.ZONE)continue;
-      for(const j of this.jaws){const th=this.ang(j),c=Math.cos(th),sn=Math.sin(th),dx=X[i]-j.px,dy=Y[i]-j.py,xl=dx*c+dy*sn,yl=-dx*sn+dy*c;
-        if(xl>-4&&xl<j.L&&Math.abs(yl)<j.a){crush.push([i,j.col]);break;}}}
-    for(const [i,nc] of crush.sort((a,b)=>b[0]-a[0])){if(this.n+1>this.CAP)break;const x=X[i],y=Y[i];
-      burst(x,y,nc===1?262:300,8,260);snd('n',1,.07);this.crushed++;
+    for(const arm of this.arms){const rh=this.rad(arm),th=this.ang(arm);
+      if(R-(rh+this.HW)>=D*.92)continue;
+      if(arm.hit!==Math.floor(this.t/this.P)){arm.hit=Math.floor(this.t/this.P);arm.flash=1;snd('b',.9,.02);}
+      for(let i=0;i<n;i++){if(this.IM[i]>0)continue;const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d<rh)continue;
+        let da=Math.atan2(dy,dx)-th;da=Math.atan2(Math.sin(da),Math.cos(da));if(Math.abs(da)<this.B+r/R*.5)crush.push([i,arm,da]);}}
+    if(!crush.length){if(this.n>=this.CAP){this.state='full';this.end=3.2;snd('f',1,0);}return;}
+    const side={};
+    for(const [i,arm,da] of crush.sort((a,b)=>b[0]-a[0])){if(this.n+1>this.CAP)break;const x=X[i],y=Y[i],nc=arm.col;
+      burst(x,y,nc===1?262:300,9,320);snd('n',1,.06);this.crushed++;
       const last=this.n-1;X[i]=X[last];Y[i]=Y[last];PX[i]=PX[last];PY[i]=PY[last];this.C[i]=this.C[last];this.F[i]=this.F[last];this.IM[i]=this.IM[last];this.n--;
-      const dx=CX-x,dy=CY-y,dl=Math.hypot(dx,dy),ux=dx/dl,uy=dy/dl;
-      for(let k=0;k<2;k++){const s=k?1:-1,px=-uy*s,py=ux*s;this.add(x+ux*(r*2.4)+px*r*1.05,y+uy*(r*2.4)+py*r*1.05,nc,ux*9+px*3,uy*9+py*3);}}
+      // les deux nouvelles billes jaillissent par les côtés de la presse, le long de la paroi
+      const th=this.ang(arm);
+      // (positions éparpillées au hasard près du bord de la presse : pas de bloc carré quand beaucoup éclatent d'un coup)
+      for(const s of[-1,1]){const key=arm.col*2+(s>0?1:0),m=side[key]=(side[key]||0)+1,sp=Math.min(1,Math.sqrt(m)/4),
+          a=th+s*(this.B+(r+this.HW+4)/R+rnd(0,.16)*sp),rr=R-r-2-rnd(0,2.6*D)*sp,tx=-Math.sin(a)*s,ty=Math.cos(a)*s,nx=-Math.cos(a),ny=-Math.sin(a),v=rnd(5,8);
+        this.add(CX+Math.cos(a)*rr,CY+Math.sin(a)*rr,nc,tx*v+nx*rnd(1.5,3.5),ty*v+ny*rnd(1.5,3.5));}}
     if(this.n>=this.CAP){this.state='full';this.end=3.2;snd('f',1,0);}},
   step(dt){this.t+=dt;this.acc+=dt;for(let i=0;i<this.n;i++){this.F[i]=Math.max(0,this.F[i]-dt*2.5);this.IM[i]-=dt;}
+    for(const arm of this.arms)arm.flash=Math.max(0,arm.flash-dt*3);
     while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
     if(this.state==='play'&&this.t>70){this.state='full';this.end=3;}},
-  draw(){const{X,Y,C,R,r,pal}=this,n=this.n;
+  draw(){const{X,Y,C,R,r,pal,B,HW}=this,n=this.n;
     ctx.beginPath();ctx.arc(CX,CY,R+4,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=20;ctx.stroke();ctx.shadowBlur=0;
+    // impact : la paroi s'illumine à l'endroit frappé
+    for(const arm of this.arms)if(arm.flash>0){const th=this.ang(arm);ctx.beginPath();ctx.arc(CX,CY,R+4,th-B-.06,th+B+.06);ctx.lineWidth=10;ctx.strokeStyle=pal[arm.col];ctx.globalAlpha=arm.flash;ctx.shadowColor=pal[arm.col];ctx.shadowBlur=40;ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1;}
     // billes : teinte, ombre, reflet
     for(let c=0;c<pal.length;c++){ctx.fillStyle=pal[c];ctx.beginPath();for(let i=0;i<n;i++)if(C[i]===c){ctx.moveTo(X[i]+r-1,Y[i]);ctx.arc(X[i],Y[i],r-1,0,TAU);}ctx.fill();}
     ctx.fillStyle='rgba(30,10,60,.32)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r-1,Y[i]+4);ctx.arc(X[i]+2,Y[i]+4,r-5,0,TAU);}ctx.fill();
     ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]-3,Y[i]-6);ctx.arc(X[i]-6,Y[i]-6,3.4,0,TAU);}ctx.fill();
     ctx.fillStyle='#fff';for(let i=0;i<n;i++)if(this.F[i]>0){ctx.globalAlpha=this.F[i]*.7;ctx.beginPath();ctx.arc(X[i],Y[i],r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
-    // mâchoires (U) et engrenages
-    const S=this.segs();ctx.lineCap='round';ctx.lineJoin='round';
-    for(let k=0;k<2;k++){const sg=S.slice(k*3,k*3+3);
-      ctx.beginPath();ctx.moveTo(sg[0][0],sg[0][1]);for(const s of sg)ctx.lineTo(s[2],s[3]);
-      ctx.strokeStyle=k?'rgba(120,60,130,.95)':'rgba(80,60,150,.95)';ctx.lineWidth=20;ctx.stroke();ctx.strokeStyle=pal[k+1];ctx.lineWidth=3;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16;ctx.stroke();ctx.shadowBlur=0;
-      ctx.fillStyle='rgba(235,228,255,.6)';for(const s of sg)for(const f of[.25,.5,.75]){ctx.beginPath();ctx.arc(s[0]+(s[2]-s[0])*f,s[1]+(s[3]-s[1])*f,2.2,0,TAU);ctx.fill();}}
-    for(const j of this.jaws){ctx.save();ctx.translate(j.px,j.py);ctx.rotate(j.a0+j.w*this.t);ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.fillStyle='#0c0618';
-      ctx.beginPath();for(let k=0;k<14;k++){const t0=k*TAU/14;ctx.lineTo(Math.cos(t0)*34,Math.sin(t0)*34);ctx.lineTo(Math.cos(t0+.1)*44,Math.sin(t0+.1)*44);ctx.lineTo(Math.cos(t0+.32)*44,Math.sin(t0+.32)*44);ctx.lineTo(Math.cos(t0+.42)*34,Math.sin(t0+.42)*34);}
-      ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(0,0,11,0,TAU);ctx.stroke();ctx.restore();}
+    // bras : tige + presse en arc, même style que les anciennes mâchoires
+    ctx.lineCap='round';ctx.lineJoin='round';
+    for(const arm of this.arms){const th=this.ang(arm),rh=this.rad(arm),k=arm.col-1,dark=k?'rgba(120,60,130,.95)':'rgba(80,60,150,.95)';
+      const path=()=>{ctx.beginPath();ctx.moveTo(CX+Math.cos(th)*this.HUB,CY+Math.sin(th)*this.HUB);ctx.lineTo(CX+Math.cos(th)*(rh-HW),CY+Math.sin(th)*(rh-HW));ctx.moveTo(CX+Math.cos(th-B)*rh,CY+Math.sin(th-B)*rh);ctx.arc(CX,CY,rh,th-B,th+B);};
+      path();ctx.strokeStyle=dark;ctx.lineWidth=2*HW;ctx.stroke();
+      path();ctx.strokeStyle=pal[arm.col];ctx.lineWidth=3;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16+arm.flash*24;ctx.stroke();ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(235,228,255,.6)';for(const f of[-.7,-.35,0,.35,.7]){const a=th+B*f;ctx.beginPath();ctx.arc(CX+Math.cos(a)*rh,CY+Math.sin(a)*rh,2.4,0,TAU);ctx.fill();}}
+    // moyeu : engrenage central qui tourne avec les bras
+    {const rot=this.ang(this.arms[0]);ctx.save();ctx.translate(CX,CY);ctx.rotate(rot);ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.fillStyle='#0c0618';
+      ctx.beginPath();for(let k=0;k<14;k++){const t0=k*TAU/14;ctx.lineTo(Math.cos(t0)*40,Math.sin(t0)*40);ctx.lineTo(Math.cos(t0+.1)*50,Math.sin(t0+.1)*50);ctx.lineTo(Math.cos(t0+.32)*50,Math.sin(t0+.32)*50);ctx.lineTo(Math.cos(t0+.42)*40,Math.sin(t0+.42)*40);}
+      ctx.closePath();ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(0,0,13,0,TAU);ctx.stroke();ctx.restore();}
     let a=0,b=0;for(let i=0;i<n;i++){if(C[i]===1)a++;else if(C[i]===2)b++;}this.cnt=[a,b];
     ctx.font=`300 84px ${FONT}`;ctx.textBaseline='middle';ctx.letterSpacing='4px';ctx.textAlign='right';ctx.fillStyle=pal[1];ctx.fillText(String(a),CX-50,1640);ctx.textAlign='left';ctx.fillStyle=pal[2];ctx.fillText(String(b),CX+50,1640);
     ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillText('·',CX,1640);ctx.font=`500 40px ${FONT}`;ctx.letterSpacing='8px';ctx.fillStyle=pal[1];ctx.textAlign='right';ctx.fillText('LILAC',CX-50,1740);ctx.textAlign='left';ctx.fillStyle=pal[2];ctx.fillText('PINK',CX+50,1740);ctx.letterSpacing='0px';ctx.textAlign='center';
