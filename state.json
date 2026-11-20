@@ -5,14 +5,16 @@
     "battle",
     "pendulum",
     "flags",
-    "multiply"
+    "multiply",
+    "crusher"
   ],
   "episodes": {
     "multiply": 2,
     "grow": 1,
     "battle": 1,
     "pendulum": 1,
-    "flags": 1
+    "flags": 1,
+    "crusher": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
