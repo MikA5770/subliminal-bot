@@ -6,7 +6,8 @@
     "pendulum",
     "flags",
     "multiply",
-    "crusher"
+    "crusher",
+    "bricks"
   ],
   "episodes": {
     "multiply": 2,
@@ -14,7 +15,8 @@
     "battle": 1,
     "pendulum": 1,
     "flags": 1,
-    "crusher": 1
+    "crusher": 1,
+    "bricks": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
