@@ -676,17 +676,20 @@ sims.bricks={name:'12 · Brick box',hook:'One bounce. One brick. Until the walls
 };
 
 /* ---------- Format : la barre qui se brise ---------- */
-sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps in half',inst:'glass',mel:'run',
+sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps in half. They never stop coming',inst:'glass',mel:'run',
   init(){const FL=CY+330,X0=CX-430,X1=CX+430,TOP=FL-860;
-    Object.assign(this,{FL,X0,X1,TOP,TH:14,MIN:24,G:900,hm:new Float32Array(X1-X0),rest:[],
-      t:0,state:'play',acc:0,
-      bars:[{x:CX+rnd(-40,40),y:TOP+120,vx:rnd(-120,120),vy:rnd(-60,0),a:rnd(-.2,.2),w:rnd(-1.5,1.5),L:840-2*12-rnd(0,20)}]});},
+    Object.assign(this,{FL,X0,X1,TOP,TH:12,MIN:24,G:1100,CS:12,cols:new Uint16Array(Math.floor((X1-X0)/12)),rest:[],deb:[],
+      t:0,state:'play',acc:0,spawnT:.2,dropped:0,shake:0,fill:0,bars:[]});},
+  spawn(){const L=768;this.dropped++;
+    this.bars.push({x:CX+rnd(-40,40)*(this.dropped>1?6:0),y:this.TOP+40,vx:rnd(-120,120),vy:rnd(0,80),a:rnd(-.25,.25),w:rnd(-1.5,1.5),L});},
   count(){return this.bars.length+this.rest.length;},
-  hAt(x0,x1){const a=clamp(Math.floor(x0-this.X0),0,this.hm.length-1),b=clamp(Math.ceil(x1-this.X0),0,this.hm.length-1);let m=0;for(let i=a;i<=b;i++)m=Math.max(m,this.hm[i]);return m;},
-  settle(b){// le morceau se pose à plat sur le tas, là où il est tombé
-    const w=Math.max(8,b.L),h=this.TH;const x=clamp(b.x,this.X0+w/2,this.X1-w/2);
-    const base=this.hAt(x-w/2,x+w/2);this.rest.push({x,y:this.FL-base-h/2,w,h,L:b.L});
-    const a=clamp(Math.floor(x-w/2-this.X0),0,this.hm.length-1),e=clamp(Math.ceil(x+w/2-this.X0),0,this.hm.length-1);for(let i=a;i<=e;i++)this.hm[i]=base+h;},
+  hAt(x0,x1){const c=this.cols,a=clamp(Math.floor((x0-this.X0)/this.CS),0,c.length-1),b=clamp(Math.floor((x1-this.X0)/this.CS),0,c.length-1);let m=0;for(let i=a;i<=b;i++)m=Math.max(m,c[i]);return m*this.CS;},
+  settle(b){const c=this.cols,CS=this.CS,nc=Math.max(1,Math.round(b.L/CS)),N=c.length;
+    let c0=clamp(Math.round((b.x-this.X0)/CS-nc/2),0,N-nc);const top=k=>{let m=0;for(let i=k;i<k+nc;i++)m=Math.max(m,c[i]);return m;};
+    // le morceau roule vers le creux le plus proche du tas
+    for(let k=0;k<60;k++){const h=top(c0),l=c0>0?top(c0-1):1e9,r=c0<N-nc?top(c0+1):1e9;if(l<h&&l<=r)c0--;else if(r<h)c0++;else break;}
+    const base=top(c0);for(let i=c0;i<c0+nc;i++)c[i]=base+1;
+    this.rest.push({x:this.X0+(c0+nc/2)*CS,y:this.FL-(base+.5)*CS,w:nc*CS,h:CS,L:b.L});},
   phys(dt){const add=[],FL=this.FL,TH=this.TH;
     for(const b of this.bars){b.vy+=this.G*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.a+=b.w*dt;
       const hx=Math.abs(Math.cos(b.a))*b.L/2+TH/2,hy=Math.abs(Math.sin(b.a))*b.L/2+TH/2;
@@ -695,27 +698,39 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
       if(b.y-hy<this.TOP){b.y=this.TOP+hy;if(b.vy<0)b.vy=-b.vy*.5;}
       const floor=FL-this.hAt(b.x-hx+TH/2,b.x+hx-TH/2);
       if(b.y+hy>floor&&b.vy>0){b.y=floor-hy;
-        if(b.L>=this.MIN*2&&b.vy>150){
-          snd('n',clamp(b.vy/1200,.4,1),.05);
+        if(b.L>=this.MIN*2){snd('n',clamp(b.vy/1200,.4,1),.045);
           const cx=Math.cos(b.a)*b.L/4,cy=Math.sin(b.a)*b.L/4;
-          for(const s of[-1,1])add.push({x:b.x+cx*s,y:b.y+cy*s,vx:b.vx*.6+s*rnd(30,110),vy:-Math.abs(b.vy)*rnd(.9,.97),a:b.a+rnd(-.4,.4),w:b.w*.6+rnd(-4,4),L:b.L/2});
+          for(const s of[-1,1])add.push({x:b.x+cx*s,y:b.y+cy*s,vx:b.vx*.6+s*rnd(40,140),vy:-Math.abs(b.vy)*rnd(.62,.76),a:b.a+rnd(-.5,.5),w:b.w*.6+rnd(-5,5),L:b.L/2});
           b.dead=true;}
-        else{b.vy=-b.vy*rnd(.2,.3);b.vx*=.6;b.w*=.4;if(Math.abs(b.vy)<120){b.dead=true;this.settle(b);snd('b',.25,.08);}}}}
+        else{b.vy=-b.vy*.25;b.vx*=.5;b.w*=.4;if(Math.abs(b.vy)<110){b.dead=true;this.settle(b);snd('b',.2,.1);}}}}
     if(add.length||this.bars.some(b=>b.dead))this.bars=this.bars.filter(b=>!b.dead).concat(add);},
-  step(dt){this.t+=dt;this.acc+=dt*.72;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
-    if(this.state==='play'&&this.bars.length===0&&this.t>4){this.state='done';this.end=3;snd('f',1,0);burst(CX,this.FL-30,262,90,900);}
-    if(this.t>70&&this.state==='play'){this.state='done';this.end=3;}},
-  col(L){const g=Math.log2(840/L);return`hsl(258,75%,${92-Math.min(14,g*2.5)}%)`;},
-  draw(){ctx.strokeStyle='rgba(228,220,255,.55)';ctx.lineWidth=2;ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);
-    ctx.shadowColor='#8b5cf6';ctx.shadowBlur=8;
+  boom(){this.state='boom';this.end=4.2;this.shake=1;snd('s',1,0);snd('s',.8,.02);snd('f',1,0);
+    const cx=CX,cy=this.FL;for(const r of this.rest.concat(this.bars.map(b=>({x:b.x,y:b.y,w:Math.max(10,b.L),h:this.TH,L:b.L})))){
+      const dx=r.x-cx,dy=r.y-cy-200,d=Math.hypot(dx,dy)||1,s=rnd(500,1700);this.deb.push({x:r.x,y:r.y,w:r.w,h:r.h,L:r.L,vx:dx/d*s+rnd(-150,150),vy:dy/d*s*.6-rnd(0,250),a:0,va:rnd(-9,9)});}
+    this.total=this.count();this.rest=[];this.bars=[];burst(CX,CY,262,120,1400);},
+  step(dt){this.t+=dt;this.shake=Math.max(0,this.shake-dt*1.5);
+    if(this.state==='play'){
+      // les barres arrivent de plus en plus vite
+      this.spawnT-=dt;if(this.spawnT<=0){this.spawn();this.spawnT=Math.max(.3,1.5*Math.pow(.95,this.dropped));}
+      this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
+      let mx=0,sum=0;const c=this.cols;for(let i=0;i<c.length;i++){mx=Math.max(mx,c[i]);sum+=c[i];}mx*=this.CS;
+      this.fill=sum*this.CS/c.length/(this.FL-this.TOP);
+      if(this.fill>.85||this.t>62)this.boom();}
+    else for(const d of this.deb){d.vy+=1300*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.a+=d.va*dt;}},
+  col(L){const g=Math.log2(768/L);return`hsl(${258+g*8},75%,${92-g*6}%)`;},
+  draw(){const sh=this.shake*18;ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
+    if(this.state==='play'){ctx.strokeStyle='rgba(228,220,255,.6)';ctx.lineWidth=2;ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);}
+    ctx.shadowColor='#8b5cf6';ctx.shadowBlur=6;
     for(const r of this.rest){ctx.fillStyle=this.col(r.L);ctx.fillRect(r.x-r.w/2+.5,r.y-r.h/2+.5,r.w-1,r.h-1);}
-    for(const b of this.bars){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=this.col(b.L);const w=Math.max(8,b.L),h=this.TH;ctx.fillRect(-w/2,-h/2,w,h);ctx.restore();}
-    ctx.shadowBlur=0;
-    const n=this.count();
-    // la réponse à « combien de morceaux ? » passe en grand au centre une fois tout posé
-    if(this.state==='done'){popBig(`${fmtN(n)} PIECES`,CY-160,110,'#ffffff');big('FROM ONE BAR',1690,50,'rgba(255,255,255,.55)');}
-    else{bigBump('n',n,`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);if(!this.bars.length)big('ALL SETTLED',1750,46,'rgba(255,255,255,.5)');}},
-  info(){return{state:this.state,n:this.count(),dur:+this.t.toFixed(1)};}
+    for(const b of this.bars){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=this.col(b.L);const w=Math.max(10,b.L);ctx.fillRect(-w/2,-this.TH/2,w,this.TH);ctx.restore();}
+    for(const d of this.deb){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.a);ctx.fillStyle=this.col(d.L);ctx.fillRect(-d.w/2,-d.h/2,d.w,d.h);ctx.restore();}
+    ctx.shadowBlur=0;ctx.restore();
+    const n=this.state==='play'?this.count():this.total;
+    big(`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);
+    if(this.state==='play'){const p=clamp(this.fill/.85,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
+      big(`${Math.round(p*100)}% FULL`,1790,40,'rgba(255,255,255,.55)');}
+    else big('IT BURST',CY-560,90,'#ffffff');},
+  info(){let mx=0;for(let i=0;i<this.cols.length;i++)mx=Math.max(mx,this.cols[i]*12);return{state:this.state,n:this.state==='play'?this.count():this.total,dur:+this.t.toFixed(1),fill:+this.fill.toFixed(2),mx:Math.round(mx),bars:this.bars.length,rest:this.rest.length};}
 };
 
 /* ---------- Format : de 1 à un demi-million ---------- */

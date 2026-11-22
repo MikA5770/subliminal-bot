@@ -96,10 +96,10 @@ MODES = {
     },
     "split": {
         "series": "Splinter", "keyword": "Satisfying falling bar snaps in half on every bounce",
-        "hooks": ["Every bar that hits the floor snaps in half", "One bar. Guess how many pieces", "It only takes one fall"],
-        "question": "How many pieces did you guess?",
+        "hooks": ["Every bar that hits the floor snaps in half. They never stop coming", "Guess how many pieces before it bursts", "The box fills up. Then it bursts"],
+        "question": "How many pieces did you guess before it burst?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 12, "max": 50,
+        "hue": False, "min": 22, "max": 50,
     },
     "overflow": {
         "series": "Overflow", "keyword": "1 ball becomes 262,144 balls satisfying simulation",
@@ -162,6 +162,8 @@ def interesting(mode, info):
         # Fin serrée : le gagnant termine avec peu de vie (frustration = commentaires),
         # sans duel qui s'éternise (au-delà de 40 s le score baisse)
         return 10 - info["hp"] / 10 - max(0, d - 40) / 5 if info["state"] == "win" else None
+    if mode == "split":
+        return 5 + info["n"] / 1000 if info["state"] == "boom" else None
     if mode in ("pendulum", "bricks", "split"):
         if info["state"] not in ("done", "clear"):
             return None
