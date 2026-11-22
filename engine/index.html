@@ -677,60 +677,84 @@ sims.bricks={name:'12 · Brick box',hook:'One bounce. One brick. Until the walls
 
 /* ---------- Format : la barre qui se brise ---------- */
 sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps in half. They never stop coming',inst:'glass',mel:'run',
-  init(){const FL=CY+330,X0=CX-430,X1=CX+430,TOP=FL-860;
-    Object.assign(this,{FL,X0,X1,TOP,TH:12,MIN:24,G:1100,CS:12,cols:new Uint16Array(Math.floor((X1-X0)/12)),rest:[],deb:[],
-      t:0,state:'play',acc:0,spawnT:.2,dropped:0,shake:0,fill:0,bars:[]});},
-  spawn(){const L=768;this.dropped++;
-    this.bars.push({x:CX+rnd(-40,40)*(this.dropped>1?6:0),y:this.TOP+40,vx:rnd(-120,120),vy:rnd(0,80),a:rnd(-.25,.25),w:rnd(-1.5,1.5),L});},
-  count(){return this.bars.length+this.rest.length;},
-  hAt(x0,x1){const c=this.cols,a=clamp(Math.floor((x0-this.X0)/this.CS),0,c.length-1),b=clamp(Math.floor((x1-this.X0)/this.CS),0,c.length-1);let m=0;for(let i=a;i<=b;i++)m=Math.max(m,c[i]);return m*this.CS;},
-  settle(b){const c=this.cols,CS=this.CS,nc=Math.max(1,Math.round(b.L/CS)),N=c.length;
-    let c0=clamp(Math.round((b.x-this.X0)/CS-nc/2),0,N-nc);const top=k=>{let m=0;for(let i=k;i<k+nc;i++)m=Math.max(m,c[i]);return m;};
-    // le morceau roule vers le creux le plus proche du tas
-    for(let k=0;k<60;k++){const h=top(c0),l=c0>0?top(c0-1):1e9,r=c0<N-nc?top(c0+1):1e9;if(l<h&&l<=r)c0--;else if(r<h)c0++;else break;}
-    const base=top(c0);for(let i=c0;i<c0+nc;i++)c[i]=base+1;
-    this.rest.push({x:this.X0+(c0+nc/2)*CS,y:this.FL-(base+.5)*CS,w:nc*CS,h:CS,L:b.L});},
-  phys(dt){const add=[],FL=this.FL,TH=this.TH;
+  init(){const FL=CY+330,X0=CX-430,X1=CX+430,TOP=FL-860,CAP=2900,r=9;
+    Object.assign(this,{FL,X0,X1,TOP,TH:12,MIN:24,G:1100,r,CAP,X:new Float32Array(CAP),Y:new Float32Array(CAP),PX:new Float32Array(CAP),PY:new Float32Array(CAP),A:new Float32Array(CAP),n:0,
+      ncol:Math.ceil((X1-X0)/12),surf:new Float32Array(Math.ceil((X1-X0)/12)),
+      t:0,state:'play',acc:0,spawnT:.2,dropped:0,shake:0,fill:0,packT:0,bars:[],deb:[]});
+    this.surf.fill(FL);},
+  spawn(){this.dropped++;this.bars.push({x:CX+(this.dropped>1?rnd(-240,240):rnd(-30,30)),y:this.TOP+40,vx:rnd(-140,140),vy:rnd(0,80),a:rnd(-.25,.25),w:rnd(-1.5,1.5),L:768});},
+  addPiece(x,y,vx,vy){if(this.n>=this.CAP)return;const i=this.n++,h=1/120;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx*h;this.PY[i]=y-vy*h;this.A[i]=rnd(-.6,.6);},
+  count(){return this.n+this.bars.reduce((s,b)=>s+1,0);},
+  surfAt(x0,x1){let m=this.FL;const a=clamp(Math.floor((x0-this.X0)/12),0,this.ncol-1),b=clamp(Math.floor((x1-this.X0)/12),0,this.ncol-1);for(let i=a;i<=b;i++)m=Math.min(m,this.surf[i]);return m;},
+  phys(dt){const{X,Y,PX,PY,r,X0,X1,TOP,FL}=this,n=this.n,D=2*r,packed=this.state!=='play';
+    // morceaux : Verlet + collisions entre eux, ils rebondissent sans s'arrêter
+    const g=this.G*dt*dt;
+    for(let i=0;i<n;i++){let vx=X[i]-PX[i],vy=Y[i]-PY[i];PX[i]=X[i];PY[i]=Y[i];X[i]+=vx*.999;Y[i]+=vy*.999+g;}
+    const cs=D,gw=Math.ceil((X1-X0)/cs)+2,gh=Math.ceil((FL-TOP)/cs)+2,head=new Int32Array(gw*gh),next=new Int32Array(n);
+    for(let it=0;it<3;it++){head.fill(-1);
+      for(let i=0;i<n;i++){const k=clamp(((Y[i]-TOP)/cs)|0,0,gh-1)*gw+clamp(((X[i]-X0)/cs)|0,0,gw-1);next[i]=head[k];head[k]=i;}
+      for(let i=0;i<n;i++){const gx=clamp(((X[i]-X0)/cs)|0,0,gw-1),gy=clamp(((Y[i]-TOP)/cs)|0,0,gh-1);
+        for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const cx=gx+ox,cy=gy+oy;if(cx<0||cy<0||cx>=gw||cy>=gh)continue;
+          for(let j=head[cy*gw+cx];j>=0;j=next[j]){if(j<=i)continue;const dx=X[j]-X[i],dy=Y[j]-Y[i],d2=dx*dx+dy*dy;if(d2>=D*D||d2<1e-6)continue;
+            const d=Math.sqrt(d2),c=(D-d)/d*.5;X[i]-=dx*c;Y[i]-=dy*c;X[j]+=dx*c;Y[j]+=dy*c;}}}
+      for(let i=0;i<n;i++){
+        if(X[i]<X0+r){const v=X[i]-PX[i];X[i]=X0+r;PX[i]=X[i]+v*.9;}
+        if(X[i]>X1-r){const v=X[i]-PX[i];X[i]=X1-r;PX[i]=X[i]+v*.9;}
+        if(Y[i]<TOP+r){const v=Y[i]-PY[i];Y[i]=TOP+r;PY[i]=Y[i]+v*.9;}
+        if(Y[i]>FL-r){let v=Y[i]-PY[i];Y[i]=FL-r;
+          // sol vivant : chaque morceau qui touche le sol est relancé
+          if(!packed){const kick=Math.max(v*.95,rnd(3.2,5.2));PY[i]=Y[i]+kick;}else PY[i]=Y[i]+v*.3;}}}
+    for(let i=0;i<n;i++)this.A[i]+=(X[i]-PX[i])*.02;
+    // surface de la foule, pour que les barres rebondissent dessus
+    const s=this.surf;s.fill(FL);for(let i=0;i<n;i++){const c=clamp(((X[i]-X0)/12)|0,0,this.ncol-1);if(Y[i]-r<s[c])s[c]=Y[i]-r;}
+    // barres
+    const add=[];
     for(const b of this.bars){b.vy+=this.G*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.a+=b.w*dt;
-      const hx=Math.abs(Math.cos(b.a))*b.L/2+TH/2,hy=Math.abs(Math.sin(b.a))*b.L/2+TH/2;
-      if(b.x-hx<this.X0){b.x=this.X0+hx;if(b.vx<0){b.vx=-b.vx*.8;b.w=-b.w*.7;}}
-      if(b.x+hx>this.X1){b.x=this.X1-hx;if(b.vx>0){b.vx=-b.vx*.8;b.w=-b.w*.7;}}
-      if(b.y-hy<this.TOP){b.y=this.TOP+hy;if(b.vy<0)b.vy=-b.vy*.5;}
-      const floor=FL-this.hAt(b.x-hx+TH/2,b.x+hx-TH/2);
-      if(b.y+hy>floor&&b.vy>0){b.y=floor-hy;
-        if(b.L>=this.MIN*2){snd('n',clamp(b.vy/1200,.4,1),.045);
+      const hx=Math.abs(Math.cos(b.a))*b.L/2+this.TH/2,hy=Math.abs(Math.sin(b.a))*b.L/2+this.TH/2;
+      if(b.x-hx<X0){b.x=X0+hx;if(b.vx<0){b.vx=-b.vx*.85;b.w=-b.w*.7;}}
+      if(b.x+hx>X1){b.x=X1-hx;if(b.vx>0){b.vx=-b.vx*.85;b.w=-b.w*.7;}}
+      if(b.y-hy<TOP){b.y=TOP+hy;if(b.vy<0)b.vy=-b.vy*.6;}
+      const fl=this.surfAt(b.x-hx+6,b.x+hx-6);
+      if(b.y+hy>fl&&b.vy>0){b.y=fl-hy;
+        if(b.vy>380||b.bounces>6){snd('n',clamp(b.vy/1300,.4,1),.045);b.dead=true;
           const cx=Math.cos(b.a)*b.L/4,cy=Math.sin(b.a)*b.L/4;
-          for(const s of[-1,1])add.push({x:b.x+cx*s,y:b.y+cy*s,vx:b.vx*.6+s*rnd(40,140),vy:-Math.abs(b.vy)*rnd(.62,.76),a:b.a+rnd(-.5,.5),w:b.w*.6+rnd(-5,5),L:b.L/2});
-          b.dead=true;}
-        else{b.vy=-b.vy*.25;b.vx*=.5;b.w*=.4;if(Math.abs(b.vy)<110){b.dead=true;this.settle(b);snd('b',.2,.1);}}}}
+          for(const sg of[-1,1]){const L=b.L/2,x=b.x+cx*sg,y=b.y+cy*sg,vx=b.vx*.6+sg*rnd(40,150),vy=-Math.abs(b.vy)*rnd(.8,.92)-120;
+            if(L<=this.MIN)this.addPiece(x,y-6,vx,vy);else add.push({x,y,vx,vy,a:b.a+rnd(-.5,.5),w:b.w*.6+rnd(-5,5),L,bounces:0});}}
+        else{b.vy=-b.vy*.92-160;b.bounces=(b.bounces||0)+1;b.w+=rnd(-2,2);snd('b',.25,.08);}}}
     if(add.length||this.bars.some(b=>b.dead))this.bars=this.bars.filter(b=>!b.dead).concat(add);},
   boom(){this.state='boom';this.end=4.2;this.shake=1;snd('s',1,0);snd('s',.8,.02);snd('f',1,0);
-    const cx=CX,cy=this.FL;for(const r of this.rest.concat(this.bars.map(b=>({x:b.x,y:b.y,w:Math.max(10,b.L),h:this.TH,L:b.L})))){
-      const dx=r.x-cx,dy=r.y-cy-200,d=Math.hypot(dx,dy)||1,s=rnd(500,1700);this.deb.push({x:r.x,y:r.y,w:r.w,h:r.h,L:r.L,vx:dx/d*s+rnd(-150,150),vy:dy/d*s*.6-rnd(0,250),a:0,va:rnd(-9,9)});}
-    this.total=this.count();this.rest=[];this.bars=[];burst(CX,CY,262,120,1400);},
-  step(dt){this.t+=dt;this.shake=Math.max(0,this.shake-dt*1.5);
-    if(this.state==='play'){
-      // les barres arrivent de plus en plus vite
-      this.spawnT-=dt;if(this.spawnT<=0){this.spawn();this.spawnT=Math.max(.3,1.5*Math.pow(.95,this.dropped));}
+    this.total=this.n+this.bars.length;
+    for(let i=0;i<this.n;i++){const dx=this.X[i]-CX,dy=this.Y[i]-(this.FL-300),d=Math.hypot(dx,dy)||1,s=rnd(500,1600);
+      this.deb.push({x:this.X[i],y:this.Y[i],w:this.MIN,h:this.TH,vx:dx/d*s+rnd(-120,120),vy:dy/d*s*.7-rnd(0,300),a:this.A[i],va:rnd(-9,9)});}
+    for(const b of this.bars)this.deb.push({x:b.x,y:b.y,w:b.L,h:this.TH,vx:rnd(-600,600),vy:rnd(-900,-200),a:b.a,va:rnd(-6,6)});
+    this.n=0;this.bars=[];burst(CX,CY,262,140,1500);},
+  step(dt){this.t+=dt;this.shake=Math.max(this.state==='packed'?.12+.35*(this.packT/4.5):0,this.shake-dt*1.5);
+    if(this.state!=='boom'){
+      if(this.state==='play'){this.spawnT-=dt;if(this.spawnT<=0){this.spawn();this.spawnT=Math.max(.3,1.5*Math.pow(.95,this.dropped));}}
       this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
-      let mx=0,sum=0;const c=this.cols;for(let i=0;i<c.length;i++){mx=Math.max(mx,c[i]);sum+=c[i];}mx*=this.CS;
-      this.fill=sum*this.CS/c.length/(this.FL-this.TOP);
-      if(this.fill>.85||this.t>62)this.boom();}
+      // remplissage = place occupée par les morceaux (tassés) dans la boîte
+      this.fill=this.n*(2*this.r)*(2*this.r)*.96/((this.X1-this.X0)*(this.FL-this.TOP));
+      if(this.state==='play'&&(this.fill>=1||this.n>=this.CAP-40||this.t>70)){this.state='packed';this.packT=0;snd('s',.4,0);
+        for(const b of this.bars){for(let k=0;k<b.L/this.MIN;k++)this.addPiece(b.x+(k-b.L/this.MIN/2)*this.MIN*Math.cos(b.a),b.y,0,0);}this.bars=[];}
+      if(this.state==='packed'){this.packT+=dt;if(this.packT>=4.6)this.boom();else if(Math.random()<dt*3)snd('b',.2+.3*this.packT/4.6,.2);}}
     else for(const d of this.deb){d.vy+=1300*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.a+=d.va*dt;}},
-  col(L){const g=Math.log2(768/L);return`hsl(${258+g*8},75%,${92-g*6}%)`;},
   draw(){const sh=this.shake*18;ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
-    if(this.state==='play'){ctx.strokeStyle='rgba(228,220,255,.6)';ctx.lineWidth=2;ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);}
-    ctx.shadowColor='#8b5cf6';ctx.shadowBlur=6;
-    for(const r of this.rest){ctx.fillStyle=this.col(r.L);ctx.fillRect(r.x-r.w/2+.5,r.y-r.h/2+.5,r.w-1,r.h-1);}
-    for(const b of this.bars){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=this.col(b.L);const w=Math.max(10,b.L);ctx.fillRect(-w/2,-this.TH/2,w,this.TH);ctx.restore();}
-    for(const d of this.deb){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.a);ctx.fillStyle=this.col(d.L);ctx.fillRect(-d.w/2,-d.h/2,d.w,d.h);ctx.restore();}
-    ctx.shadowBlur=0;ctx.restore();
-    const n=this.state==='play'?this.count():this.total;
+    if(this.state!=='boom'){const p=this.state==='packed'?this.packT/4.6:0;
+      ctx.strokeStyle=p?`rgba(${228+27*p},${220-120*p},${255-60*p},.95)`:'rgba(228,220,255,.6)';ctx.lineWidth=2+p*4;if(p){ctx.shadowColor='#f0abfc';ctx.shadowBlur=10+30*p;}
+      ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);ctx.shadowBlur=0;
+      if(p>.35){ctx.strokeStyle=`rgba(255,255,255,${(p-.35)*.9})`;ctx.lineWidth=1.5;ctx.beginPath();const k=Math.floor(p*9);for(let c=0;c<k;c++){const sx=c%2?this.X0:this.X1,sy=this.TOP+80+((c*137)%700);ctx.moveTo(sx,sy);ctx.lineTo(sx+(c%2?1:-1)*(30+c*6),sy+((c*53)%40)-20);ctx.lineTo(sx+(c%2?1:-1)*(55+c*9),sy+((c*29)%60)-10);}ctx.stroke();}}
+    const{X,Y,A}=this,w=this.MIN,h=this.TH;ctx.fillStyle='hsl(270,75%,84%)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=5;
+    for(let i=0;i<this.n;i++){ctx.save();ctx.translate(X[i],Y[i]);ctx.rotate(A[i]);ctx.fillRect(-w/2,-h/2,w,h);ctx.restore();}
+    ctx.shadowBlur=0;
+    for(const b of this.bars){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.a);ctx.fillStyle=`hsl(258,75%,${92-Math.log2(768/b.L)*3}%)`;ctx.fillRect(-b.L/2,-h/2,b.L,h);ctx.restore();}
+    for(const d of this.deb){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.a);ctx.fillStyle='hsl(270,75%,84%)';ctx.fillRect(-d.w/2,-d.h/2,d.w,d.h);ctx.restore();}
+    ctx.restore();
+    const n=this.state==='boom'?this.total:this.n+this.bars.length;
     big(`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);
-    if(this.state==='play'){const p=clamp(this.fill/.85,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
-      big(`${Math.round(p*100)}% FULL`,1790,40,'rgba(255,255,255,.55)');}
+    if(this.state!=='boom'){const p=clamp(this.fill,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle=this.state==='packed'?'#f0abfc':'#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
+      big(this.state==='packed'?'NO ROOM LEFT':`${Math.round(p*100)}% FULL`,1790,40,this.state==='packed'?'#f0abfc':'rgba(255,255,255,.55)');}
     else big('IT BURST',CY-560,90,'#ffffff');},
-  info(){let mx=0;for(let i=0;i<this.cols.length;i++)mx=Math.max(mx,this.cols[i]*12);return{state:this.state,n:this.state==='play'?this.count():this.total,dur:+this.t.toFixed(1),fill:+this.fill.toFixed(2),mx:Math.round(mx),bars:this.bars.length,rest:this.rest.length};}
+  info(){return{state:this.state,n:this.state==='boom'?this.total:this.n+this.bars.length,dur:+this.t.toFixed(1),fill:+this.fill.toFixed(2)};}
 };
 
 /* ---------- Format : de 1 à un demi-million ---------- */

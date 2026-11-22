@@ -99,7 +99,7 @@ MODES = {
         "hooks": ["Every bar that hits the floor snaps in half. They never stop coming", "Guess how many pieces before it bursts", "The box fills up. Then it bursts"],
         "question": "How many pieces did you guess before it burst?",
         "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
-        "hue": False, "min": 22, "max": 50,
+        "hue": False, "min": 30, "max": 60,
     },
     "overflow": {
         "series": "Overflow", "keyword": "1 ball becomes 262,144 balls satisfying simulation",
