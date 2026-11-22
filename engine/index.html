@@ -949,6 +949,113 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
   info(){let a=0,b=0;for(let i=0;i<this.n;i++){if(this.C[i]===1)a++;else if(this.C[i]===2)b++;}return{state:this.state,n:this.n,crushed:this.crushed,gap:Math.abs(a-b),dur:+this.t.toFixed(1)};}
 };
 
+/* ---------- Monde de billes partagé (Verlet + grille) ---------- */
+const NEON=['#ff5c8a','#ffb347','#ffe66d','#7cf29c','#4dd8ff','#7b8cff','#c77dff','#ff7de9'];
+function BallWorld(cap,r){Object.assign(this,{cap,r,n:0,X:new Float32Array(cap),Y:new Float32Array(cap),PX:new Float32Array(cap),PY:new Float32Array(cap),C:new Uint8Array(cap),F:new Float32Array(cap),IM:new Float32Array(cap)});}
+BallWorld.prototype.add=function(x,y,c,vx=0,vy=0,h=1/120){if(this.n>=this.cap)return -1;const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx*h;this.PY[i]=y-vy*h;this.C[i]=c;this.F[i]=1;this.IM[i]=.35;return i;};
+BallWorld.prototype.remove=function(i){const l=--this.n;for(const k of['X','Y','PX','PY','C','F','IM'])this[k][i]=this[k][l];};
+BallWorld.prototype.step=function(dt,gx,gy,bounds,extra,damp=.998,vmax=14){const{X,Y,PX,PY,r}=this,n=this.n,D=2*r,ax=gx*dt*dt,ay=gy*dt*dt;
+  for(let i=0;i<n;i++){let vx=(X[i]-PX[i])*damp,vy=(Y[i]-PY[i])*damp;const s=Math.hypot(vx,vy);if(s>vmax){vx*=vmax/s;vy*=vmax/s;}PX[i]=X[i];PY[i]=Y[i];X[i]+=vx+ax;Y[i]+=vy+ay;this.F[i]=Math.max(0,this.F[i]-dt*2.5);this.IM[i]-=dt;}
+  const x0=bounds[0]-D,y0=bounds[1]-D,cs=D,gw=Math.ceil((bounds[2]-bounds[0])/cs)+3,gh=Math.ceil((bounds[3]-bounds[1])/cs)+3;
+  const head=this._h&&this._h.length===gw*gh?this._h:(this._h=new Int32Array(gw*gh)),next=this._nx&&this._nx.length>=n?this._nx:(this._nx=new Int32Array(this.cap));
+  for(let it=0;it<3;it++){head.fill(-1);
+    for(let i=0;i<n;i++){const k=clamp(((Y[i]-y0)/cs)|0,0,gh-1)*gw+clamp(((X[i]-x0)/cs)|0,0,gw-1);next[i]=head[k];head[k]=i;}
+    for(let i=0;i<n;i++){const gx2=clamp(((X[i]-x0)/cs)|0,0,gw-1),gy2=clamp(((Y[i]-y0)/cs)|0,0,gh-1);
+      for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){const cx=gx2+ox,cy=gy2+oy;if(cx<0||cy<0||cx>=gw||cy>=gh)continue;
+        for(let j=head[cy*gw+cx];j>=0;j=next[j]){if(j<=i)continue;const dx=X[j]-X[i],dy=Y[j]-Y[i],d2=dx*dx+dy*dy;if(d2>=D*D||d2<1e-6)continue;
+          const d=Math.sqrt(d2),c=(D-d)/d*.5;X[i]-=dx*c;Y[i]-=dy*c;X[j]+=dx*c;Y[j]+=dy*c;}}}
+    extra(this);}
+};
+BallWorld.prototype.pushSeg=function(i,a,b,c,e,thick){const X=this.X,Y=this.Y,sx=c-a,sy=e-b,l2=sx*sx+sy*sy,u=clamp(((X[i]-a)*sx+(Y[i]-b)*sy)/l2,0,1),qx=a+sx*u,qy=b+sy*u,dx=X[i]-qx,dy=Y[i]-qy,d=Math.hypot(dx,dy),m=this.r+thick/2;
+  if(d<m&&d>1e-4){X[i]+=dx/d*(m-d);Y[i]+=dy/d*(m-d);return true;}return false;};
+BallWorld.prototype.draw=function(pal){const{X,Y,C,r}=this,n=this.n;
+  for(let c=0;c<pal.length;c++){ctx.fillStyle=pal[c];ctx.beginPath();for(let i=0;i<n;i++)if(C[i]===c){ctx.moveTo(X[i]+r-1,Y[i]);ctx.arc(X[i],Y[i],r-1,0,TAU);}ctx.fill();}
+  ctx.fillStyle='rgba(20,6,40,.3)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r-2,Y[i]+r*.3);ctx.arc(X[i]+r*.12,Y[i]+r*.25,r-r*.3,0,TAU);}ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.78)';ctx.beginPath();const hr=Math.max(1.5,r*.2);for(let i=0;i<n;i++){ctx.moveTo(X[i]-r*.35+hr,Y[i]-r*.35);ctx.arc(X[i]-r*.35,Y[i]-r*.35,hr,0,TAU);}ctx.fill();
+  ctx.fillStyle='#fff';for(let i=0;i<n;i++)if(this.F[i]>0){ctx.globalAlpha=this.F[i]*.65;ctx.beginPath();ctx.arc(X[i],Y[i],r,0,TAU);ctx.fill();}ctx.globalAlpha=1;};
+function drawGear(x,y,R,rot,teeth=14){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.fillStyle='#120a24';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=14;
+  ctx.beginPath();const ri=R*.8;for(let k=0;k<teeth;k++){const t0=k*TAU/teeth,dt=TAU/teeth;ctx.lineTo(Math.cos(t0)*ri,Math.sin(t0)*ri);ctx.lineTo(Math.cos(t0+dt*.2)*R,Math.sin(t0+dt*.2)*R);ctx.lineTo(Math.cos(t0+dt*.55)*R,Math.sin(t0+dt*.55)*R);ctx.lineTo(Math.cos(t0+dt*.75)*ri,Math.sin(t0+dt*.75)*ri);}
+  ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.beginPath();ctx.arc(0,0,R*.25,0,TAU);ctx.stroke();for(let k=0;k<4;k++){const a=k*TAU/4;ctx.beginPath();ctx.arc(Math.cos(a)*R*.5,Math.sin(a)*R*.5,R*.08,0,TAU);ctx.stroke();}ctx.restore();}
+
+/* ---------- Format : presse hydraulique qui fait exploser les couleurs ---------- */
+sims.press={name:'17 · Press',hook:'Every ball it crushes explodes into 3. Watch the colors take over',inst:'marimba',mel:'run',
+  init(){const BW=760,BH=900,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+40,FL=TOP+BH,HW=280;
+    Object.assign(this,{BW,BH,X0,X1,TOP,FL,HW,w:new BallWorld(1400,14),t:0,acc:0,state:'play',crushed:0,presses:0,
+      cyc:0,hy:TOP+10,phase:'wait',ph:rnd(.6,1),hx:CX,jam:0});
+    for(let i=0;i<3;i++)this.w.add(CX+(i-1)*34,FL-60,i*3%8,rnd(-1,1),0);},
+  phys(dt){const w=this.w,{X0,X1,TOP,FL}=this,r=w.r,hb=this.hy+40,HW=this.HW,hx=this.hx;
+    w.step(dt,0,1500,[X0,TOP-200,X1,FL],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
+      if(X[i]<X0+r)X[i]=X0+r;if(X[i]>X1-r)X[i]=X1-r;if(Y[i]>FL-r)Y[i]=FL-r;if(Y[i]<TOP-40+r)Y[i]=TOP-40+r;
+      // tête de presse : rectangle plein
+      if(Y[i]+r>this.hy-20&&Y[i]-r<hb&&X[i]>hx-HW/2-r&&X[i]<hx+HW/2+r){
+        const up=(this.hy-20)-(Y[i]+r),dn=hb-(Y[i]-r),lf=(hx-HW/2-r)-X[i],rt=(hx+HW/2+r)-X[i];
+        const m=Math.min(-up,dn,-lf,rt);if(m===dn)Y[i]=hb+r;else if(m===-lf)X[i]=hx-HW/2-r;else if(m===rt)X[i]=hx+HW/2+r;else Y[i]=this.hy-20-r;}}},.999,16);
+    // écrasement : coincée entre la tête et le sol
+    if(this.phase==='down'){const lim=FL-hb;if(lim<2*r*.85){const cr=[];for(let i=0;i<w.n;i++)if(w.IM[i]<=0&&w.X[i]>hx-HW/2-2&&w.X[i]<hx+HW/2+2&&w.Y[i]>hb-2)cr.push(i);
+        for(const i of cr.sort((a,b)=>b-a)){const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;burst(x,y,-1,6,500);
+          for(let k=0;k<3;k++){const side=x<hx?-1:1,s=rnd(500,1100);const j=w.add(hx+side*(HW/2+r+2)+rnd(-4,4),FL-r-rnd(0,40),rnd(0,8)|0,side*s,-rnd(300,900));}}
+        if(cr.length){snd('s',.35,.05);for(let k=0;k<Math.min(6,cr.length);k++)snd('n',1,.02);}}}},
+  step(dt){this.t+=dt;const{TOP,FL}=this,r=this.w.r;
+    if(this.state==='play'){
+      // cycle : attente, descente, remontée
+      if(this.phase==='wait'){this.ph-=dt;if(this.ph<=0){this.phase='down';this.presses++;this.hx=CX+rnd(-200,200)*(this.presses>1?1:0);}}
+      else if(this.phase==='down'){let low=FL-40;for(let i=0;i<this.w.n;i++)if(this.w.X[i]>this.hx-this.HW/2&&this.w.X[i]<this.hx+this.HW/2)low=Math.min(low,FL-40);
+        this.hy+=dt*1500;if(this.hy+40>=FL-3){this.hy=FL-43;this.phase='up';snd('b',1,0);}}
+      else if(this.phase==='up'){this.hy-=dt*900;if(this.hy<=TOP+10){this.hy=TOP+10;this.phase='wait';this.ph=Math.max(.25,1.1-this.presses*.05);}}
+      // plein : la presse ne peut plus descendre
+      let a=0;for(let i=0;i<this.w.n;i++)a+=Math.PI*r*r;const fill=a/(this.BW*(this.BH-60))/.78;this.fill=fill;
+      if(fill>=1||this.w.n>=this.w.cap-20||this.t>58){this.state='full';this.end=4.2;snd('f',1,0);this.phase='up';}}
+    else{if(this.hy>TOP+10)this.hy-=dt*900;}
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const{X0,X1,TOP,FL,HW,hx,hy}=this;
+    ctx.strokeStyle='rgba(235,228,255,.85)';ctx.lineWidth=4;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16;ctx.strokeRect(X0,TOP-40,X1-X0,FL-TOP+40);ctx.shadowBlur=0;
+    this.w.draw(NEON);
+    // vérin + tête
+    ctx.fillStyle='#1a1030';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.fillRect(hx-26,TOP-120,52,hy-TOP+100);ctx.strokeRect(hx-26,TOP-120,52,hy-TOP+100);
+    ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18;ctx.fillStyle='#24163f';ctx.fillRect(hx-HW/2,hy-20,HW,60);ctx.strokeRect(hx-HW/2,hy-20,HW,60);ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(235,228,255,.5)';for(let k=0;k<6;k++)ctx.fillRect(hx-HW/2+20+k*(HW-40)/5-3,hy+10,6,6);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);
+    const p=clamp(this.fill||0,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.fillRect(CX-300,1730,600*p,6);
+    if(this.state==='full')big('NO ROOM TO PRESS',CY-600,70,'#ffffff');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,presses:this.presses,dur:+this.t.toFixed(1)};}
+};
+
+/* ---------- Format : sablier broyeur (chaque passage ×3) ---------- */
+sims.grinder={name:'18 · Grinder',hook:'Every ball that falls through the gears comes out as 3',inst:'kalimba',mel:'run',
+  init(){const R=440,GR=72,GAP=10;
+    Object.assign(this,{R,GR,GAP,w:new BallWorld(2600,10),t:0,acc:0,state:'play',dir:1,flipT:0,rot:0,crushed:0,passes:1,ang:0,targetAng:0});
+    for(let i=0;i<2;i++)this.w.add(CX+rnd(-120,120),CY-260+rnd(-60,60),i*3%8,rnd(-1,1),0);},
+  gears(){const o=this.GR+this.GAP/2+13;return[[CX-o,CY],[CX+o,CY]];},
+  phys(dt){const w=this.w,R=this.R,r=w.r,G=this.gears(),GR=this.GR,dir=this.dir;
+    const hh=250*dir,xr=Math.sqrt(R*R-250*250)-6;const wallL=[CX-xr,CY-hh,CX-24,CY-dir*62],wallR=[CX+24,CY-dir*62,CX+xr,CY-hh];this._walls=[wallL,wallR];
+    w.step(dt,0,620*dir,[CX-R,CY-R,CX+R,CY+R],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
+      if(w.pushSeg(i,...wallL,10)||w.pushSeg(i,...wallR,10)){const sg=X[i]<CX?1:-1;X[i]+=sg*.35;Y[i]+=dir*.33;}
+      for(let q=0;q<2;q++){const[gx,gy]=G[q],dx=X[i]-gx,dy=Y[i]-gy,d=Math.hypot(dx,dy),m=GR+r-16;if(d<m+3&&d>1e-4){const om=(q?-1:1)*dir*170/120/3,tx=-dy/d,ty=dx/d;X[i]=gx+dx/d*Math.max(d,m)+tx*om;Y[i]=gy+dy/d*Math.max(d,m)+ty*om;}}
+      const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d>R-r){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}},.992,14);
+    // entre les engrenages : broyée, ressort en 3 de l'autre côté
+    const cr=[];for(let i=0;i<w.n;i++){if(w.IM[i]>0)continue;if(Math.abs(w.X[i]-CX)<30&&Math.abs(w.Y[i]-CY)<18)cr.push(i);}
+    for(const i of cr.sort((a,b)=>b-a)){const x=w.X[i];w.remove(i);this.crushed++;burst(x,CY,-1,5,380);snd('n',1,.05);
+      for(let k=0;k<3;k++)w.add(CX+(k-1)*2*r*1.02,CY+dir*(r*2.2+k%2*4),rnd(0,8)|0,(k-1)*rnd(60,160),dir*rnd(200,420));}},
+  step(dt){this.t+=dt;this.rot+=dt*2.2;const w=this.w;
+    if(this.state==='play'){
+      // tout est passé : on retourne le sablier
+      let above=0;for(let i=0;i<w.n;i++)if((w.Y[i]-CY)*this.dir<0)above++;
+      if(above===0){this.flipT+=dt;const k=clamp((this.flipT-.2)/.8,0,1);this.ang=(this.base||0)+Math.PI*k*k*(3-2*k);if(this.flipT>1.1){this.dir*=-1;this.flipT=0;this.passes++;this.base=(this.base||0)+Math.PI;this.ang=this.base;snd('b',1,0);snd('f',.4,0);this.flash=1;}}else{this.flipT=0;this.ang=this.base||0;}
+      const fillA=w.n*Math.PI*w.r*w.r/(Math.PI*this.R*this.R*.5)/.78;this.fill=fillA;
+      if(fillA>=1||w.n>=w.cap-30||this.t>60){this.state='full';this.end=4.2;snd('f',1,0);}}
+    this.flash=Math.max(0,(this.flash||0)-dt*2);
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const R=this.R,G=this.gears(),GR=this.GR;ctx.save();ctx.translate(CX,CY);ctx.rotate(this.ang||0);ctx.translate(-CX,-CY);
+    ctx.beginPath();ctx.arc(CX,CY,R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+(this.flash||0)*30;ctx.stroke();ctx.shadowBlur=0;
+    this.w.draw(NEON);
+    ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=8;ctx.lineCap='round';ctx.beginPath();for(const[a,b,c,e]of(this._walls||[])){ctx.moveTo(a,b);ctx.lineTo(c,e);}ctx.stroke();
+    drawGear(G[0][0],G[0][1],GR,this.rot*this.dir,12);drawGear(G[1][0],G[1][1],GR,-this.rot*this.dir,12);ctx.restore();
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);big(`PASS ${this.passes}  ·  ×3 EACH`,1750,40,'rgba(255,255,255,.55)');
+    if(this.state==='full')big('IT CAN’T TAKE MORE',CY-600,70,'#ffffff');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,passes:this.passes,dur:+this.t.toFixed(1)};}
+};
+
+window.__sims=sims;
 /* ---------- Boucle ---------- */
 let cur,curKey,last=0,rec=null;
 function load(k,ov={}){curKey=k;cur=sims[k];parts=[];simT=0;noteI=0;lastK={};bumps={};cur.end=0;cur.endT0=0;

@@ -44,7 +44,7 @@ Quand un abonné propose une idée en commentaire, ajoute-la dans `ideas.json` :
 ```
 La prochaine vidéo prend ce format, affiche « IDEA BY @PSEUDO » sous l'accroche et le crédite dans la légende (le « @ » est ajouté s'il manque). L'idée est ensuite marquée `"used": true`. Les battles ne passent pas par `ideas.json` (il leur faut des combattants) : utilise `battles.json`.
 
-Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, battle.
+Formats : rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, press, grinder, battle.
 
 ## Battles d'actualité (`battles.json`)
 Ajoute une affiche avec sa date ; le robot la publie entre 2 jours avant et le jour J (une battle par jour maximum) :

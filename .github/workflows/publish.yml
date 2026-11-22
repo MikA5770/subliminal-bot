@@ -13,7 +13,7 @@ on:
         description: "Forcer un format (vide = choix automatique)"
         type: choice
         default: ""
-        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, battle]
+        options: ["", rings, multiply, grow, trail, war, reveal, maze, flags, piano, glass, pendulum, bricks, split, overflow, crusher, press, grinder, battle]
 
 permissions:
   contents: write

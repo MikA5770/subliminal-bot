@@ -115,6 +115,20 @@ MODES = {
         "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#hypnotic"],
         "hue": False, "min": 25, "max": 50,
     },
+    "press": {
+        "series": "Press", "keyword": "Satisfying hydraulic press crushes balls into rainbow colors",
+        "hooks": ["Every ball it crushes explodes into 3", "Hydraulic press vs 3 balls. Watch the colors take over", "Guess how many before it can't press anymore"],
+        "question": "How many balls did you think it would take?",
+        "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 25, "max": 60,
+    },
+    "grinder": {
+        "series": "Grinder", "keyword": "Satisfying ball grinder, every ball through the gears becomes 3",
+        "hooks": ["Every ball through the gears comes out as 3", "2 balls. Flip. Flip. Flip. Count them", "How many flips before it's full?"],
+        "question": "How many flips did you guess?",
+        "tags": ["#satisfying", "#gears", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 22, "max": 50,
+    },
     "battle": {
         "series": "Battle", "keyword": "Ball battle simulation",
         "hooks": ["Pick a side before it starts"],
@@ -151,6 +165,8 @@ def interesting(mode, info):
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
+    if mode in ("press", "grinder"):
+        return 8 if info["state"] == "full" and info["n"] >= 600 else None
     if mode == "crusher":
         # Pas d'égalité : la couleur gagnante affichée doit être indiscutable
         if info["state"] != "full" or info["n"] < 600 or info["gap"] < 2:
@@ -195,6 +211,8 @@ MODE_TAGS = {
     "split": ["#physics", "#breaking", "#guessthenumber", "#simulation", "#fractal"],
     "overflow": ["#ballmultiply", "#exponential", "#1ball", "#chaos", "#guessthenumber"],
     "crusher": ["#hydraulicpress", "#crusher", "#duplication", "#physics", "#asmr"],
+    "press": ["#hydraulicpress", "#crushing", "#rainbow", "#duplication", "#physics"],
+    "grinder": ["#gears", "#hourglass", "#duplication", "#rainbow", "#physics"],
     "battle": ["#ballbattle", "#whowins", "#pickaside", "#battle", "#simulation"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],
 }
