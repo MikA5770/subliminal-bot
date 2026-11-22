@@ -677,7 +677,7 @@ sims.bricks={name:'12 · Brick box',hook:'One bounce. One brick. Until the walls
 
 /* ---------- Format : la barre qui se brise ---------- */
 sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps in half. They never stop coming',inst:'glass',mel:'run',
-  init(){const FL=CY+330,X0=CX-430,X1=CX+430,TOP=FL-860,CAP=2900,r=9;
+  init(){const FL=CY+330,X0=CX-430,X1=CX+430,TOP=FL-860,CAP=3400,r=9;
     Object.assign(this,{FL,X0,X1,TOP,TH:12,MIN:24,G:1100,r,CAP,X:new Float32Array(CAP),Y:new Float32Array(CAP),PX:new Float32Array(CAP),PY:new Float32Array(CAP),A:new Float32Array(CAP),n:0,
       ncol:Math.ceil((X1-X0)/12),surf:new Float32Array(Math.ceil((X1-X0)/12)),
       t:0,state:'play',acc:0,spawnT:.2,dropped:0,shake:0,fill:0,packT:0,bars:[],deb:[]});
@@ -736,13 +736,12 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
     this.n=0;this.bars=[];burst(CX,CY,262,140,1500);},
   step(dt){this.t+=dt;this.shake=Math.max(this.state==='packed'?.12+.35*(this.packT/4.5):0,this.shake-dt*1.5);
     if(this.state!=='boom'){
-      if(this.state==='play'){this.spawnT-=dt;if(this.spawnT<=0&&this.fill<.9){this.spawn();this.spawnT=Math.max(.24,1.4*Math.pow(.94,this.dropped));}}
+      if(this.state==='play'){this.spawnT-=dt;if(this.spawnT<=0&&this.fill<1){this.spawn();this.spawnT=Math.max(.42,1.4*Math.pow(.95,this.dropped));}}
       this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
       // remplissage = place occupée par les morceaux (tassés) dans la boîte
       this.fill=this.n*(2*this.r)*(2*this.r)*.96/((this.X1-this.X0)*(this.FL-this.TOP));
-      if(this.state==='play'&&((this.fill>=.9&&!this.bars.length)||this.n>=this.CAP-40||this.t>70)){this.state='packed';this.packT=0;snd('s',.4,0);
-        for(const b of this.bars){for(let k=0;k<b.L/this.MIN;k++)this.addPiece(b.x+(k-b.L/this.MIN/2)*this.MIN*Math.cos(b.a),b.y,0,0);}this.bars=[];}
-      if(this.state==='packed'){this.packT+=dt;if(this.packT>=4.6)this.boom();else if(Math.random()<dt*3)snd('b',.2+.3*this.packT/4.6,.2);}}
+      if(this.state==='play'&&((this.fill>=1&&!this.bars.length)||this.t>75)){this.state='packed';this.packT=0;this.beat=0;snd('s',.4,0);}
+      if(this.state==='packed'){this.packT+=dt;if(this.packT>=4.6)this.boom();else{this.beat-=dt;if(this.beat<=0){snd('n',.5+.5*this.packT/4.6,0);this.beat=Math.max(.09,.6-this.packT*.12);}}}}
     else for(const d of this.deb){d.vy+=1300*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.a+=d.va*dt;}},
   draw(){const sh=this.shake*18;ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
     if(this.state!=='boom'){const p=this.state==='packed'?this.packT/4.6:0;
@@ -757,7 +756,7 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
     ctx.restore();
     const n=this.state==='boom'?this.total:this.n+this.bars.length;
     big(`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);
-    if(this.state!=='boom'){const p=this.state==='packed'?1:clamp(this.fill/.9,0,.99);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle=this.state==='packed'?'#f0abfc':'#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
+    if(this.state!=='boom'){const p=this.state==='packed'?1:clamp(this.fill,0,.99);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle=this.state==='packed'?'#f0abfc':'#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
       big(this.state==='packed'?'NO ROOM LEFT':`${Math.round(p*100)}% FULL`,1790,40,this.state==='packed'?'#f0abfc':'rgba(255,255,255,.55)');}
     else big('IT BURST',CY-560,90,'#ffffff');},
   info(){return{state:this.state,n:this.state==='boom'?this.total:this.n+this.bars.length,dur:+this.t.toFixed(1),fill:+this.fill.toFixed(2)};}
