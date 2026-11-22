@@ -9,14 +9,15 @@
     "crusher",
     "bricks",
     "war",
-    "trail"
+    "trail",
+    "flags"
   ],
   "episodes": {
     "multiply": 2,
     "grow": 1,
     "battle": 1,
     "pendulum": 1,
-    "flags": 1,
+    "flags": 2,
     "crusher": 1,
     "bricks": 1,
     "war": 1,
