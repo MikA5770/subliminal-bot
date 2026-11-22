@@ -706,7 +706,11 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
           if(!packed){const kick=Math.max(v*.95,rnd(3.2,5.2));PY[i]=Y[i]+kick;}else PY[i]=Y[i]+v*.3;}}}
     for(let i=0;i<n;i++)this.A[i]+=(X[i]-PX[i])*.02;
     // surface de la foule, pour que les barres rebondissent dessus
-    const s=this.surf;s.fill(FL);for(let i=0;i<n;i++){const c=clamp(((X[i]-X0)/12)|0,0,this.ncol-1);if(Y[i]-r<s[c])s[c]=Y[i]-r;}
+    // surface réelle de la foule : première case (de haut en bas) pleine avec une case pleine dessous
+    {const cs2=24,gw2=Math.ceil((X1-X0)/cs2),gh2=Math.ceil((FL-TOP)/cs2),occ=this.occ&&this.occ.length===gw2*gh2?this.occ:(this.occ=new Uint16Array(gw2*gh2));occ.fill(0);
+      for(let i=0;i<n;i++){const gx=clamp(((X[i]-X0)/cs2)|0,0,gw2-1),gy=clamp(((Y[i]-TOP)/cs2)|0,0,gh2-1);occ[gy*gw2+gx]++;}
+      const s=this.surf;for(let c=0;c<this.ncol;c++){const gx=clamp(((c*12+6)/cs2)|0,0,gw2-1);let y=FL;
+        for(let gy=0;gy<gh2-1;gy++){if(occ[gy*gw2+gx]>=2&&occ[(gy+1)*gw2+gx]>=2){y=TOP+gy*cs2;break;}}s[c]=y;}}
     // barres
     const add=[];
     for(const b of this.bars){b.vy+=this.G*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;b.a+=b.w*dt;
@@ -715,12 +719,14 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
       if(b.x+hx>X1){b.x=X1-hx;if(b.vx>0){b.vx=-b.vx*.85;b.w=-b.w*.7;}}
       if(b.y-hy<TOP){b.y=TOP+hy;if(b.vy<0)b.vy=-b.vy*.6;}
       const fl=this.surfAt(b.x-hx+6,b.x+hx-6);
-      if(b.y+hy>fl&&b.vy>0){b.y=fl-hy;
-        if(b.vy>380||b.bounces>6){snd('n',clamp(b.vy/1300,.4,1),.045);b.dead=true;
+      const tight=fl-TOP<2*hy+6;
+      if((b.y+hy>fl&&b.vy>0)||tight){b.y=Math.max(TOP+hy,fl-hy);
+        if(b.vy>380||(b.rest||0)>.35||tight){snd('n',clamp(b.vy/1300,.4,1),.045);b.dead=true;
           const cx=Math.cos(b.a)*b.L/4,cy=Math.sin(b.a)*b.L/4;
           for(const sg of[-1,1]){const L=b.L/2,x=b.x+cx*sg,y=b.y+cy*sg,vx=b.vx*.6+sg*rnd(40,150),vy=-Math.abs(b.vy)*rnd(.8,.92)-120;
             if(L<=this.MIN)this.addPiece(x,y-6,vx,vy);else add.push({x,y,vx,vy,a:b.a+rnd(-.5,.5),w:b.w*.6+rnd(-5,5),L,bounces:0});}}
-        else{b.vy=-b.vy*.92-160;b.bounces=(b.bounces||0)+1;b.w+=rnd(-2,2);snd('b',.25,.08);}}}
+        else{if(b.vy>120)snd('b',.25,.08);b.vy=-b.vy*.88;b.w+=rnd(-1.5,1.5);}}
+      if(b.y+hy>=fl-2&&Math.abs(b.vy)<160)b.rest=(b.rest||0)+dt;else b.rest=0;}
     if(add.length||this.bars.some(b=>b.dead))this.bars=this.bars.filter(b=>!b.dead).concat(add);},
   boom(){this.state='boom';this.end=4.2;this.shake=1;snd('s',1,0);snd('s',.8,.02);snd('f',1,0);
     this.total=this.n+this.bars.length;
@@ -730,11 +736,11 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
     this.n=0;this.bars=[];burst(CX,CY,262,140,1500);},
   step(dt){this.t+=dt;this.shake=Math.max(this.state==='packed'?.12+.35*(this.packT/4.5):0,this.shake-dt*1.5);
     if(this.state!=='boom'){
-      if(this.state==='play'){this.spawnT-=dt;if(this.spawnT<=0){this.spawn();this.spawnT=Math.max(.3,1.5*Math.pow(.95,this.dropped));}}
+      if(this.state==='play'){this.spawnT-=dt;if(this.spawnT<=0&&this.fill<.9){this.spawn();this.spawnT=Math.max(.24,1.4*Math.pow(.94,this.dropped));}}
       this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}
       // remplissage = place occupée par les morceaux (tassés) dans la boîte
       this.fill=this.n*(2*this.r)*(2*this.r)*.96/((this.X1-this.X0)*(this.FL-this.TOP));
-      if(this.state==='play'&&(this.fill>=1||this.n>=this.CAP-40||this.t>70)){this.state='packed';this.packT=0;snd('s',.4,0);
+      if(this.state==='play'&&((this.fill>=.9&&!this.bars.length)||this.n>=this.CAP-40||this.t>70)){this.state='packed';this.packT=0;snd('s',.4,0);
         for(const b of this.bars){for(let k=0;k<b.L/this.MIN;k++)this.addPiece(b.x+(k-b.L/this.MIN/2)*this.MIN*Math.cos(b.a),b.y,0,0);}this.bars=[];}
       if(this.state==='packed'){this.packT+=dt;if(this.packT>=4.6)this.boom();else if(Math.random()<dt*3)snd('b',.2+.3*this.packT/4.6,.2);}}
     else for(const d of this.deb){d.vy+=1300*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.a+=d.va*dt;}},
@@ -751,7 +757,7 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
     ctx.restore();
     const n=this.state==='boom'?this.total:this.n+this.bars.length;
     big(`${fmtN(n)} ${n===1?'PIECE':'PIECES'}`,1640,100);
-    if(this.state!=='boom'){const p=clamp(this.fill,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle=this.state==='packed'?'#f0abfc':'#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
+    if(this.state!=='boom'){const p=this.state==='packed'?1:clamp(this.fill/.9,0,.99);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle=this.state==='packed'?'#f0abfc':'#e4dcff';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=12;ctx.fillRect(CX-300,1730,600*p,6);ctx.shadowBlur=0;
       big(this.state==='packed'?'NO ROOM LEFT':`${Math.round(p*100)}% FULL`,1790,40,this.state==='packed'?'#f0abfc':'rgba(255,255,255,.55)');}
     else big('IT BURST',CY-560,90,'#ffffff');},
   info(){return{state:this.state,n:this.state==='boom'?this.total:this.n+this.bars.length,dur:+this.t.toFixed(1),fill:+this.fill.toFixed(2)};}
