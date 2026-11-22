@@ -11,7 +11,8 @@
     "war",
     "trail",
     "flags",
-    "crusher"
+    "crusher",
+    "split"
   ],
   "episodes": {
     "multiply": 2,
@@ -22,7 +23,8 @@
     "crusher": 2,
     "bricks": 1,
     "war": 1,
-    "trail": 1
+    "trail": 1,
+    "split": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
