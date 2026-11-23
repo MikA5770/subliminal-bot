@@ -1,14 +1,16 @@
-name: Créer et publier une vidéo
+name: Créer une vidéo
 
 on:
-  # Les publications sont lancées par une tâche programmée de Claude (7h53, 11h53, 18h53 à Paris).
-  # La programmation de GitHub (schedule) ne se déclenchait pas sur ce dépôt.
+  # Lancement à la main (appli GitHub : Actions > Créer une vidéo > Run workflow).
+  # « brouillon » crée la vidéo et la dépose en brouillon dans Buffer sur les 3 réseaux :
+  # tu la regardes dans Buffer puis tu la publies, la programmes ou la supprimes.
   workflow_dispatch:
     inputs:
-      publish:
-        description: "Publier pour de vrai sur TikTok, Instagram et YouTube (sinon simple test)"
-        type: boolean
-        default: false
+      envoi:
+        description: "brouillon = à valider dans Buffer · publier = en ligne tout de suite · test = rien n'est envoyé"
+        type: choice
+        default: brouillon
+        options: [brouillon, publier, test]
       mode:
         description: "Forcer un format (vide = choix automatique)"
         type: choice
@@ -27,7 +29,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     env:
-      PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish == true }}
+      PUBLISH: ${{ inputs.envoi != 'test' }}
+      DRAFT: ${{ inputs.envoi == 'publier' && '0' || '1' }}
       CHROME_PATH: /usr/bin/google-chrome
       HANDLE: ""
       # Identifiant affiché en fond de vidéo sur chaque plateforme
@@ -88,7 +91,7 @@ jobs:
           URLS=$(python -c "import json,sys;p=json.load(open(sys.argv[2]));print(json.dumps({k:sys.argv[1]+v for k,v in p.get('files',{}).items()}))" "$BASE" "$GITHUB_WORKSPACE/out/post.json")
           echo "VIDEO_URLS=$URLS" >> "$GITHUB_ENV"
 
-      - name: Publier via Buffer
+      - name: Envoyer à Buffer (brouillon ou publication)
         if: env.PUBLISH == 'true'
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
@@ -98,6 +101,6 @@ jobs:
         if: env.PUBLISH == 'true'
         run: |
           git add state.json ideas.json battles.json
-          git commit -q -m "Épisode publié" || exit 0
+          git commit -q -m "Épisode créé" || exit 0
           git pull -q --rebase origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"
