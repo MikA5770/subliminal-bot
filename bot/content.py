@@ -122,6 +122,20 @@ MODES = {
         "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#asmr"],
         "hue": False, "min": 25, "max": 60,
     },
+    "oval": {
+        "series": "Oval", "keyword": "Satisfying bouncing balls multiply through the hole in the oval",
+        "hooks": ["Every ball through the hole becomes 2", "1 ball. 1 hole. Can the oval hold them?", "Guess how many before the oval breaks"],
+        "question": "How many balls did you guess before it broke?",
+        "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 25, "max": 55,
+    },
+    "portal": {
+        "series": "Portal", "keyword": "Satisfying bouncing balls multiply through the holes of the oval",
+        "hooks": ["Every ball through the hole comes back as 2", "1 ball. 2 holes. Can the oval hold them?", "Guess how many before the oval breaks"],
+        "question": "How many balls did you guess before it broke?",
+        "tags": ["#satisfying", "#ballmultiply", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 25, "max": 55,
+    },
     "grinder": {
         "series": "Grinder", "keyword": "Satisfying ball grinder, every ball through the gears becomes 3",
         "hooks": ["Every ball through the gears comes out as 3", "2 balls. Flip. Flip. Flip. Count them", "How many flips before it's full?"],
@@ -165,6 +179,9 @@ def interesting(mode, info):
         return 10 - gap if 2 <= gap <= 6 else None
     if mode == "overflow":
         return 8 if info["state"] == "break" and 26 <= d <= 56 else None
+    if mode in ("oval", "portal"):
+        # Ovale qui casse vite : la vidéo reste nerveuse
+        return 10 - d / 10 if info["state"] == "break" and info["n"] >= 1000 else None
     if mode in ("press", "grinder"):
         return 8 if info["state"] == "full" and info["n"] >= 600 else None
     if mode == "crusher":
@@ -212,6 +229,8 @@ MODE_TAGS = {
     "overflow": ["#ballmultiply", "#exponential", "#1ball", "#chaos", "#guessthenumber"],
     "crusher": ["#hydraulicpress", "#crusher", "#duplication", "#physics", "#asmr"],
     "press": ["#hydraulicpress", "#crushing", "#rainbow", "#duplication", "#physics"],
+    "oval": ["#bouncingballs", "#multiply", "#exponential", "#ballsimulation", "#escape"],
+    "portal": ["#portal", "#bouncingballs", "#multiply", "#exponential", "#ballsimulation"],
     "grinder": ["#gears", "#hourglass", "#duplication", "#rainbow", "#physics"],
     "battle": ["#ballbattle", "#whowins", "#pickaside", "#battle", "#simulation"],
     "piano": ["#guessthesong", "#musicball", "#piano", "#namethesong", "#melody"],

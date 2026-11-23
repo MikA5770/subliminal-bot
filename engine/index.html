@@ -1060,6 +1060,107 @@ sims.grinder={name:'18 · Grinder',hook:'Every ball that falls through the gears
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,passes:this.passes,dur:+this.t.toFixed(1)};}
 };
 
+/* ---------- Format : ovale troué (chaque balle qui passe par le trou devient 2) ---------- */
+sims.oval={name:'19 · Oval hole',hook:'Every ball through the hole becomes 2. Can the oval hold them?',inst:'marimba',mel:'run',
+  init(){Object.assign(this,{A:390,B:530,r:13,gap:.78,rot:rnd(0,TAU),sp:rnd(1,1.3)*(rand()<.5?-1:1),balls:[],fall:[],cap:1500,state:'play',t:0,esc:0,glow:0});
+    this.balls.push(this.nb(CX,CY-200));},
+  nb(x,y){const a=rnd(0,TAU),s=rnd(800,1100);return{x:x+rnd(-4,4),y:y+rnd(-4,4),vx:Math.cos(a)*s,vy:Math.sin(a)*s-200,c:(rand()*NEON.length)|0,f:1};},
+  // angle « paramétrique » d'un point par rapport à l'ovale (sert à savoir s'il est en face du trou)
+  par(x,y){return Math.atan2((y-CY)/this.B,(x-CX)/this.A);},
+  step(dt){this.t+=dt;this.rot+=this.sp*dt;this.glow=Math.max(0,this.glow-dt*3);const{A,B,r}=this;
+    if(this.state==='play'){const keep=[];let add=0;
+      for(const b of this.balls){move(b,dt,1000);b.f=Math.max(0,b.f-dt*2.5);
+        const a=A-r,bb=B-r,u=(b.x-CX)/a,v=(b.y-CY)/bb,q=Math.hypot(u,v);
+        if(q>=1){
+          if(norm(this.par(b.x,b.y)-this.rot)<this.gap){
+            // sortie par le trou : elle tombe dehors, 2 nouvelles naissent au centre
+            if(Math.hypot((b.x-CX)/(A+r),(b.y-CY)/(B+r))>1){this.fall.push(b);add+=2;this.esc++;continue;}
+          }else{
+            const nx0=(b.x-CX)/(a*a),ny0=(b.y-CY)/(bb*bb),nl=Math.hypot(nx0,ny0)||1,nx=nx0/nl,ny=ny0/nl,vn=b.vx*nx+b.vy*ny;
+            b.x=CX+u/q*a;b.y=CY+v/q*bb;
+            if(vn>0){b.vx-=2*vn*nx;b.vy-=2*vn*ny;keepSpeed(b,900,1700);snd('n',imp(b)*.7,.06);}
+          }
+        }
+        keep.push(b);}
+      if(add){snd('b',.8,.04);this.glow=1;}
+      for(let i=0;i<add&&keep.length<this.cap;i++)keep.push(this.nb(CX,CY));
+      this.balls=keep;
+      if(this.balls.length>=this.cap||this.t>58){this.state='break';this.end=3.6;snd('s',1,0);snd('f',1,0);
+        for(let k=0;k<160;k++){const t=rnd(0,TAU);parts.push({x:CX+Math.cos(t)*A,y:CY+Math.sin(t)*B,vx:Math.cos(t)*rnd(150,800),vy:Math.sin(t)*rnd(150,800),life:1,hue:rnd(0,360)});}
+        for(const b of this.balls){const t=Math.atan2(b.y-CY,b.x-CX);b.vx=Math.cos(t)*rnd(500,1400);b.vy=Math.sin(t)*rnd(500,1400)-300;this.fall.push(b);}
+        this.final=this.balls.length;this.balls=[];}
+    }
+    for(const b of this.fall)move(b,dt,1500);
+    this.fall=this.fall.filter(b=>b.y<H+80&&b.x>-80&&b.x<W+80);},
+  draw(){const{A,B,r}=this;
+    if(this.state==='play'){
+      // trou centré sur rot, largeur 2*gap en angle paramétrique
+      ctx.beginPath();const s0=this.rot+this.gap,s1=this.rot-this.gap+TAU;for(let k=0;k<=160;k++){const t=s0+(s1-s0)*k/160;const x=CX+Math.cos(t)*A,y=CY+Math.sin(t)*B;k?ctx.lineTo(x,y):ctx.moveTo(x,y);}
+      ctx.lineWidth=5;ctx.lineCap='round';ctx.strokeStyle='#fff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=20+this.glow*30;ctx.stroke();ctx.shadowBlur=0;}
+    const all=this.balls.concat(this.fall);
+    for(let c=0;c<NEON.length;c++){ctx.fillStyle=NEON[c];ctx.beginPath();for(const b of all)if(b.c===c){ctx.moveTo(b.x+r-1,b.y);ctx.arc(b.x,b.y,r-1,0,TAU);}ctx.fill();}
+    ctx.fillStyle='rgba(20,6,40,.3)';ctx.beginPath();for(const b of all){ctx.moveTo(b.x+r-2,b.y+r*.3);ctx.arc(b.x+r*.12,b.y+r*.25,r*.7,0,TAU);}ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();for(const b of all){ctx.moveTo(b.x-r*.35+2.6,b.y-r*.35);ctx.arc(b.x-r*.35,b.y-r*.35,2.6,0,TAU);}ctx.fill();
+    ctx.fillStyle='#fff';for(const b of this.balls)if(b.f>0){ctx.globalAlpha=b.f*.65;ctx.beginPath();ctx.arc(b.x,b.y,r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
+    const n=this.state==='play'?this.balls.length:this.final;
+    bigBump('n',n,fmtN(n),1640,120);big(n===1?'BALL':'BALLS',1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='break')popBig('THE OVAL BROKE!',CY,110,'#ffffff');},
+  info(){return{state:this.state,n:this.state==='play'?this.balls.length:this.final,esc:this.esc,dur:+this.t.toFixed(1)};}
+};
+
+/* ---------- Format : ovale à deux trous (haut et bas) : chaque balle qui passe par un trou ressort par l'autre en 2 ---------- */
+sims.portal={name:'20 · Oval portal',hook:'Every ball through the hole comes back as 2. Can the oval hold them?',inst:'marimba',mel:'run',
+  init(){Object.assign(this,{A:390,B:530,r:13,gap:.21,balls:[],fall:[],cap:2500,state:'play',t:0,esc:0,gT:0,gB:0});
+    const b=this.nb(CX+rnd(-150,150),CY);b.vx=rnd(350,550)*(rand()<.5?-1:1);b.vy=rnd(-500,-200);b.c=4;this.balls.push(b);},
+  nb(x,y){return{x,y,vx:0,vy:0,c:(rand()*NEON.length)|0,f:1};},
+  // trou du haut à -90°, trou du bas à +90° (angle paramétrique de l'ovale)
+  hole(x,y){const t=Math.atan2((y-CY)/this.B,(x-CX)/this.A);if(Math.abs(t+Math.PI/2)<this.gap)return -1;if(Math.abs(t-Math.PI/2)<this.gap)return 1;return 0;},
+  hw(){return this.A*Math.sin(this.gap);},
+  step(dt){this.t+=dt;this.gT=Math.max(0,this.gT-dt*3);this.gB=Math.max(0,this.gB-dt*3);const{A,B,r}=this;
+    if(this.state==='play'){const keep=[],born=[];
+      for(const b of this.balls){move(b,dt,1000);b.f=Math.max(0,b.f-dt*2.5);
+        // déjà en train d'entrer par un trou : on la laisse passer
+        if(b.inT>0){b.inT-=dt;keep.push(b);continue;}
+        const a=A-r,bb=B-r,u=(b.x-CX)/a,v=(b.y-CY)/bb,q=Math.hypot(u,v);
+        if(q>=1){const h=this.hole(b.x,b.y);
+          if(h){if(Math.hypot((b.x-CX)/(A+r),(b.y-CY)/(B+r))>1){
+              // passe le trou : ressort en 2 par l'autre trou, dans le même sens
+              this.esc++;h>0?this.gB=1:this.gT=1;const w=this.hw()-r-2,sp=Math.max(500,Math.abs(b.vy));
+              for(let k=0;k<2&&keep.length+born.length<this.cap;k++){const nb=this.nb(CX+rnd(-w,w),h>0?CY-B-r:CY+B+r);
+                nb.vx=b.vx*.5+rnd(-420,420);nb.f=this.balls.length>80?.25:1;nb.vy=h>0?sp*rnd(.85,1.05):-sp*rnd(.85,1.05);nb.inT=.12;born.push(nb);}
+              continue;}}
+          else{const nx0=(b.x-CX)/(a*a),ny0=(b.y-CY)/(bb*bb),nl=Math.hypot(nx0,ny0)||1,nx=nx0/nl,ny=ny0/nl,vn=b.vx*nx+b.vy*ny;
+            b.x=CX+u/q*a;b.y=CY+v/q*bb;
+            if(vn>0){b.vx-=2*vn*nx;b.vy-=2*vn*ny;keepSpeed(b,800,1700);snd('n',imp(b)*.7,.06);}}}
+        keep.push(b);}
+      if(born.length)snd('b',.8,.04);
+      this.balls=keep.concat(born).slice(0,this.cap);
+      if(this.balls.length>=this.cap||this.t>58){this.state='break';this.end=3.6;snd('s',1,0);snd('f',1,0);
+        for(let k=0;k<160;k++){const t=rnd(0,TAU);parts.push({x:CX+Math.cos(t)*A,y:CY+Math.sin(t)*B,vx:Math.cos(t)*rnd(150,800),vy:Math.sin(t)*rnd(150,800),life:1,hue:rnd(0,360)});}
+        for(const b of this.balls){const t=Math.atan2(b.y-CY,b.x-CX);b.vx=Math.cos(t)*rnd(500,1400);b.vy=Math.sin(t)*rnd(500,1400)-300;this.fall.push(b);}
+        this.final=this.balls.length;this.balls=[];}
+    }
+    for(const b of this.fall)move(b,dt,1500);
+    this.fall=this.fall.filter(b=>b.y<H+80&&b.x>-80&&b.x<W+80);},
+  draw(){const{A,B,r,gap}=this;
+    if(this.state==='play'){
+      // deux arcs : côté droit et côté gauche, coupés en haut et en bas
+      ctx.lineWidth=5;ctx.lineCap='round';ctx.strokeStyle='#fff';ctx.shadowColor='#a78bfa';ctx.shadowBlur=20;
+      for(const[s0,s1]of[[-Math.PI/2+gap,Math.PI/2-gap],[Math.PI/2+gap,3*Math.PI/2-gap]]){ctx.beginPath();for(let k=0;k<=100;k++){const t=s0+(s1-s0)*k/100,x=CX+Math.cos(t)*A,y=CY+Math.sin(t)*B;k?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();}
+      ctx.shadowBlur=0;
+      // trous lumineux : s'allument quand une balle les traverse
+      const w=this.hw();for(const[y,g,col]of[[CY-B,this.gT,'#4dd8ff'],[CY+B,this.gB,'#ff7de9']]){ctx.save();ctx.globalAlpha=.6+.4*g;ctx.strokeStyle=col;ctx.shadowColor=col;ctx.shadowBlur=26+g*30;ctx.lineWidth=5+g*4;ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(CX-w,y);ctx.lineTo(CX+w,y);ctx.stroke();ctx.restore();}}
+    const all=this.balls.concat(this.fall);
+    for(let c=0;c<NEON.length;c++){ctx.fillStyle=NEON[c];ctx.beginPath();for(const b of all)if(b.c===c){ctx.moveTo(b.x+r-1,b.y);ctx.arc(b.x,b.y,r-1,0,TAU);}ctx.fill();}
+    ctx.fillStyle='rgba(20,6,40,.3)';ctx.beginPath();for(const b of all){ctx.moveTo(b.x+r-2,b.y+r*.3);ctx.arc(b.x+r*.12,b.y+r*.25,r*.7,0,TAU);}ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();for(const b of all){ctx.moveTo(b.x-r*.35+2.6,b.y-r*.35);ctx.arc(b.x-r*.35,b.y-r*.35,2.6,0,TAU);}ctx.fill();
+    ctx.fillStyle='#fff';for(const b of this.balls)if(b.f>0){ctx.globalAlpha=b.f*.65;ctx.beginPath();ctx.arc(b.x,b.y,r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
+    const n=this.state==='play'?this.balls.length:this.final;
+    bigBump('n',n,fmtN(n),1640,120);big(n===1?'BALL':'BALLS',1750,46,'rgba(255,255,255,.5)');
+    if(this.state==='break')popBig('THE OVAL BROKE!',CY,110,'#ffffff');},
+  info(){return{state:this.state,n:this.state==='play'?this.balls.length:this.final,esc:this.esc,dur:+this.t.toFixed(1)};}
+};
+
 window.__sims=sims;
 /* ---------- Boucle ---------- */
 let cur,curKey,last=0,rec=null;
