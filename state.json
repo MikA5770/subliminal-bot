@@ -16,7 +16,8 @@
     "trail",
     "glass",
     "press",
-    "grow"
+    "grow",
+    "portal"
   ],
   "episodes": {
     "multiply": 2,
@@ -30,7 +31,8 @@
     "trail": 2,
     "split": 1,
     "glass": 1,
-    "press": 1
+    "press": 1,
+    "portal": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
