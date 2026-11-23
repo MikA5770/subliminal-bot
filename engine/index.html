@@ -1083,7 +1083,9 @@ function drawOverlay(){
 }
 const VS=.84,VY=900;
 function render(){ctx.fillStyle=bgGrad;ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(CX,VY);ctx.scale(VS,VS);ctx.translate(-CX,-CY);cur.draw();drawParts();ctx.restore();drawOverlay();drawGrain();
-  if(cur.endT0>0&&cur.end<.45){ctx.fillStyle=`rgba(0,0,0,${cur.end<=0?1:1-cur.end/.45})`;ctx.fillRect(0,0,W,H);}}
+  // boucle : la fin se fond dans la toute première image, pour que la vidéo reparte sans coupure
+  const LP=.8;if(cur.endT0>0&&cur.end<LP){const a=cur.end<=0?1:1-cur.end/LP,e=a*a*(3-2*a);if(loopImg){ctx.globalAlpha=e;ctx.drawImage(loopImg,0,0);ctx.globalAlpha=1;}else{ctx.fillStyle=`rgba(0,0,0,${e})`;ctx.fillRect(0,0,W,H);}}}
+let loopImg=null;
 function frame(ts){
   if(!exporting){const dt=Math.min(.033,(ts-last)/1000||0);last=ts;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();}
   requestAnimationFrame(frame);
@@ -1132,16 +1134,18 @@ function wavB64(buf){const n=buf.length,ch=buf.numberOfChannels,sr=buf.sampleRat
   for(let i=0;i<n;i++)for(let c=0;c<ch;c++){v.setInt16(o,clamp(d[c][i],-1,1)*32767,true);o+=2;}
   const u=new Uint8Array(ab);let s='';for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s);}
 window.__exp={
-  start(mode,s,o={}){exporting=true;finished=false;events=[];seedV=s;rand=mulberry;if(o.secret)secretIn.value=o.secret;if(o.ep!==undefined)epIn.value=o.ep;if(o.handle!==undefined)handleIn.value=o.handle;ctaText=o.cta||'';creditText=o.credit||'';battleCfg=o.battle||null;load(mode,o);},
+  start(mode,s,o={}){exporting=true;finished=false;loopImg=null;events=[];seedV=s;rand=mulberry;if(o.secret)secretIn.value=o.secret;if(o.ep!==undefined)epIn.value=o.ep;if(o.handle!==undefined)handleIn.value=o.handle;ctaText=o.cta||'';creditText=o.credit||'';battleCfg=o.battle||null;load(mode,o);},
   handlePng(t){const c=mk(),g=c.getContext('2d');g.font=`300 72px ${FONT}`;g.letterSpacing='14px';g.textAlign='center';g.textBaseline='middle';g.fillStyle='rgba(236,230,255,.09)';g.fillText(t,W/2,CY,1000);return c.toDataURL('image/png');},
-  frame(fps){const dt=1/fps;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();return{img:cv.toDataURL('image/jpeg',.9),done:finished,t:simT};},
+  frame(fps){const dt=1/fps;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();
+    if(!loopImg){loopImg=document.createElement('canvas');loopImg.width=W;loopImg.height=H;loopImg.getContext('2d').drawImage(cv,0,0);}
+    return{img:cv.toDataURL('image/jpeg',.9),done:finished,t:simT};},
   stats(mode,s,maxT,o={}){this.start(mode,s,o);while(!finished&&simT<maxT){tick(1/240);}const r=cur.info();r.dur=+simT.toFixed(1);r.notes=events.length;return r;},
   // lead : l'image n°k montre l'état à la fin de son intervalle (k+1)/fps mais s'affiche à k/fps ;
   // on avance les sons d'une demi-image pour que chaque note tombe pile sur l'impact visible
   async audio(dur,lead=1/60){const sr=44100,oc=new OfflineAudioContext(2,Math.ceil(sr*dur),sr),ch=makeChain(oc);
     // fondu de sortie calé sur le fondu au noir de l'image (plus de coupure sèche de la réverbération),
     // et 1 dB de marge : les pics de fin (éclat + fanfare) touchaient 0 dBFS une fois encodés en AAC
-    const out=oc.createGain();out.gain.setValueAtTime(.89,0);out.gain.setValueAtTime(.89,Math.max(0,dur-.5));out.gain.linearRampToValueAtTime(0,dur);ch.comp.connect(out);out.connect(oc.destination);
+    const out=oc.createGain();out.gain.setValueAtTime(.89,0);out.gain.setValueAtTime(.89,Math.max(0,dur-.8));out.gain.linearRampToValueAtTime(0,dur);ch.comp.connect(out);out.connect(oc.destination);
     for(const e of events)if(e.t<dur-.05)synth(oc,ch,Math.max(0,e.t-lead),e);
     {const lp=oc.createBiquadFilter();lp.type='lowpass';lp.frequency.value=600;const g=oc.createGain();g.gain.setValueAtTime(0,0);g.gain.linearRampToValueAtTime(.05,1.5);g.gain.setValueAtTime(.05,Math.max(1.6,dur-1.5));g.gain.linearRampToValueAtTime(0,dur);lp.connect(g);g.connect(ch.input);
      [55,55.4,82.5,110.3].forEach(f=>{const o=oc.createOscillator();o.type='sine';o.frequency.value=f;o.connect(lp);o.start(0);o.stop(dur);});}const buf=await oc.startRendering();return wavB64(buf);}

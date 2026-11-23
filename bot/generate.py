@@ -100,12 +100,12 @@ def mark_battle_used(battle):
 
 
 def add_handle(page, src, handle, dst, dur):
-    """Identifiant en fond, qui suit le fondu au noir de la fin."""
+    """Identifiant en fond, constant (la vidéo boucle sur sa première image)."""
     png = dst.with_suffix(".png")
     png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
     st = max(0, dur - 0.5)
     subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-loop", "1", "-t", f"{dur:.2f}", "-i", str(png),
-                    "-filter_complex", f"[1]format=rgba,fade=t=out:st={st:.2f}:d=0.45:alpha=1[w];[0][w]overlay=shortest=1",
+                    "-filter_complex", "[1]format=rgba[w];[0][w]overlay=shortest=1",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy",
                     "-movflags", "+faststart", str(dst)], check=True)
     png.unlink()
