@@ -89,6 +89,7 @@ def main():
     urls = json.loads(os.environ.get("VIDEO_URLS") or "{}")
     dry = os.environ.get("DRY_RUN") == "1"
     draft = os.environ.get("DRAFT") == "1"
+    due_at = os.environ.get("DUE_AT", "").strip()  # heure précise (UTC, ISO) pour une vidéo programmée
     due = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
     if dry and not os.environ.get("BUFFER_API_KEY"):
@@ -114,6 +115,8 @@ def main():
         inp = build_input(s, c["id"], post, urls.get(s, url), due)
         if draft:
             inp.update({"mode": "addToQueue", "saveToDraft": True})
+        elif due_at:
+            inp.update({"mode": "customScheduled", "dueAt": due_at})
         if dry:
             print(f"[TEST] {s} ({c['name']}):", json.dumps(inp, ensure_ascii=False))
             continue
@@ -121,9 +124,9 @@ def main():
             res = gql(CREATE, {"input": inp})["createPost"]
         except RuntimeError as e:
             res = {"message": str(e)}
-        if not res.get("post") and draft:
+        if not res.get("post") and (draft or due_at):
             failures += 1
-            print(f"ÉCHEC brouillon {s} ({c['name']}) : {res.get('message')}")
+            print(f"ÉCHEC {s} ({c['name']}) : {res.get('message')}")
             continue
         if not (res.get("post")):
             # Plan B : programmation dans 1 minute si la publication immédiate est refusée
