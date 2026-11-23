@@ -12,7 +12,8 @@
     "trail",
     "flags",
     "crusher",
-    "split"
+    "split",
+    "trail"
   ],
   "episodes": {
     "multiply": 2,
@@ -23,7 +24,7 @@
     "crusher": 2,
     "bricks": 1,
     "war": 1,
-    "trail": 1,
+    "trail": 2,
     "split": 1
   },
   "words": [],
