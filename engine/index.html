@@ -139,8 +139,13 @@ function shatter(ac,ch,t,vel){
 }
 function bloop(ac,ch,t,vel){const o=ac.createOscillator(),g=ac.createGain();o.frequency.setValueAtTime(380,t);o.frequency.exponentialRampToValueAtTime(1100,t+.07);
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.22*vel,t+.005);g.gain.exponentialRampToValueAtTime(.0001,t+.13);o.connect(g);g.connect(ch.input);o.start(t);o.stop(t+.16);}
+function whoosh(ac,ch,t,vel){const n=ac.createBufferSource(),len=Math.ceil(ac.sampleRate*.6),b=ac.createBuffer(1,len,ac.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;n.buffer=b;
+  const f=ac.createBiquadFilter();f.type='bandpass';f.Q.value=1.2;f.frequency.setValueAtTime(300,t);f.frequency.exponentialRampToValueAtTime(5000,t+.45);
+  const g=ac.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.5*vel,t+.38);g.gain.exponentialRampToValueAtTime(.0001,t+.55);n.connect(f);f.connect(g);g.connect(ch.input);n.start(t);n.stop(t+.6);}
+function impact(ac,ch,t,vel){const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(38,t+.35);
+  g.gain.setValueAtTime(.9*vel,t);g.gain.exponentialRampToValueAtTime(.0001,t+.6);o.connect(g);g.connect(ch.comp);o.start(t);o.stop(t+.62);shatter(ac,ch,t,.25*vel);}
 function fanfare(ac,ch,t,name){[0,4,7,12,16,19].forEach((s,i)=>voice(ac,ch,t+i*.085,72+s,1,name));}
-function synth(ac,ch,t,e){if(e.k==='n')voice(ac,ch,t,e.m,e.v,e.i);else if(e.k==='s')shatter(ac,ch,t,e.v);else if(e.k==='b')bloop(ac,ch,t,e.v);else if(e.k==='f')fanfare(ac,ch,t,e.i);}
+function synth(ac,ch,t,e){if(e.k==='n')voice(ac,ch,t,e.m,e.v,e.i);else if(e.k==='s')shatter(ac,ch,t,e.v);else if(e.k==='b')bloop(ac,ch,t,e.v);else if(e.k==='f')fanfare(ac,ch,t,e.i);else if(e.k==='w')whoosh(ac,ch,t,e.v);else if(e.k==='k')impact(ac,ch,t,e.v);}
 
 let actx=null,live=null,recDest=null;
 function initAudio(){
@@ -1077,15 +1082,16 @@ function drawOverlay(){
     ctx.strokeStyle='rgba(228,220,255,.7)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(W/2-w/2,132,w,58,29);ctx.stroke();ctx.fillStyle='#e4dcff';ctx.fillText(t,W/2+5,162);ctx.letterSpacing='0px';}
   const ended=cur.endT0>0;const endP=ended&&ctaText?clamp((cur.endT0-Math.max(0,cur.end))/.6,0,1):0;const endA=clamp(endP*2-1,0,1),hookA=ended&&ctaText?clamp(1-endP*2,0,1):1;
   if(endA>0){ctx.globalAlpha=endA;topText(ctaText.toUpperCase());ctx.globalAlpha=1;}
-  const h=hookIn.value.trim().toUpperCase();if(h&&hookA>0){ctx.globalAlpha=hookA;const n=topText(h);ctx.globalAlpha=1;
+  const h=hookIn.value.trim().toUpperCase();if(h&&hookA>0){const hp=exporting?clamp((simT-.12)/.32,0,1):1,hs=1+.5*Math.pow(1-hp,3);ctx.save();ctx.translate(W/2,300);ctx.scale(hs,hs);ctx.translate(-W/2,-300);ctx.globalAlpha=hookA*hp;const n=topText(h);ctx.restore();ctx.globalAlpha=1;
     if(creditText){ctx.font=`300 28px ${FONT}`;ctx.letterSpacing='6px';ctx.globalAlpha=.55*hookA;ctx.fillStyle='#e4dcff';ctx.fillText(creditText.toUpperCase(),W/2+3,n.bottom+28);ctx.globalAlpha=1;ctx.letterSpacing='0px';}}
   const hd=handleIn.value.trim();if(hd){ctx.font=`400 30px ${FONT}`;ctx.letterSpacing='5px';ctx.globalAlpha=.45;ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(hd,W/2,1855);ctx.globalAlpha=1;ctx.letterSpacing='0px';}
 }
 const VS=.84,VY=900;
-function render(){ctx.fillStyle=bgGrad;ctx.fillRect(0,0,W,H);ctx.save();ctx.translate(CX,VY);ctx.scale(VS,VS);ctx.translate(-CX,-CY);cur.draw();drawParts();ctx.restore();drawOverlay();drawGrain();
+function render(){ctx.fillStyle=bgGrad;ctx.fillRect(0,0,W,H);const ip=clamp(simT/.9,0,1),zi=1+.32*Math.pow(1-ip,3);ctx.save();ctx.translate(CX,VY);ctx.scale(VS*zi,VS*zi);ctx.translate(-CX,-CY);cur.draw();drawParts();ctx.restore();drawOverlay();drawGrain();
+  if(exporting&&simT<.22){ctx.fillStyle=`rgba(255,255,255,${.85*(1-simT/.22)})`;ctx.fillRect(0,0,W,H);}
   // boucle : la fin se fond dans la toute première image, pour que la vidéo reparte sans coupure
   const LP=.8;if(cur.endT0>0&&cur.end<LP){const a=cur.end<=0?1:1-cur.end/LP,e=a*a*(3-2*a);if(loopImg){ctx.globalAlpha=e;ctx.drawImage(loopImg,0,0);ctx.globalAlpha=1;}else{ctx.fillStyle=`rgba(0,0,0,${e})`;ctx.fillRect(0,0,W,H);}}}
-let loopImg=null;
+let loopImg=null,teaserAt=0,teaserDone=false;
 function frame(ts){
   if(!exporting){const dt=Math.min(.033,(ts-last)/1000||0);last=ts;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();}
   requestAnimationFrame(frame);
@@ -1134,10 +1140,11 @@ function wavB64(buf){const n=buf.length,ch=buf.numberOfChannels,sr=buf.sampleRat
   for(let i=0;i<n;i++)for(let c=0;c<ch;c++){v.setInt16(o,clamp(d[c][i],-1,1)*32767,true);o+=2;}
   const u=new Uint8Array(ab);let s='';for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s);}
 window.__exp={
-  start(mode,s,o={}){exporting=true;finished=false;loopImg=null;events=[];seedV=s;rand=mulberry;if(o.secret)secretIn.value=o.secret;if(o.ep!==undefined)epIn.value=o.ep;if(o.handle!==undefined)handleIn.value=o.handle;ctaText=o.cta||'';creditText=o.credit||'';battleCfg=o.battle||null;load(mode,o);},
+  start(mode,s,o={}){exporting=true;finished=false;loopImg=null;teaserAt=o.teaserAt||0;teaserDone=false;events=[];seedV=s;rand=mulberry;if(o.secret)secretIn.value=o.secret;if(o.ep!==undefined)epIn.value=o.ep;if(o.handle!==undefined)handleIn.value=o.handle;ctaText=o.cta||'';creditText=o.credit||'';battleCfg=o.battle||null;load(mode,o);events.push({k:'k',v:1,t:0,i:instName},{k:'b',v:.8,t:.14,i:instName});},
+  teaserPng(t){const c=mk(),g=c.getContext('2d');const y=H/2-40;g.fillStyle='rgba(6,3,14,.55)';g.fillRect(0,y-90,W,180);g.font=`500 92px ${FONT}`;g.letterSpacing='18px';g.textAlign='center';g.textBaseline='middle';g.shadowColor='#8b5cf6';g.shadowBlur=30;g.fillStyle='#ffffff';g.fillText(t,W/2+9,y,1000);return c.toDataURL('image/png');},
   handlePng(t){const c=mk(),g=c.getContext('2d');g.font=`300 72px ${FONT}`;g.letterSpacing='14px';g.textAlign='center';g.textBaseline='middle';g.fillStyle='rgba(236,230,255,.09)';g.fillText(t,W/2,CY,1000);return c.toDataURL('image/png');},
   frame(fps){const dt=1/fps;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();
-    if(!loopImg){loopImg=document.createElement('canvas');loopImg.width=W;loopImg.height=H;loopImg.getContext('2d').drawImage(cv,0,0);}
+    if(!loopImg||(teaserAt&&!teaserDone&&simT>=teaserAt)){if(loopImg&&teaserAt)teaserDone=true;loopImg=document.createElement('canvas');loopImg.width=W;loopImg.height=H;loopImg.getContext('2d').drawImage(cv,0,0);}
     return{img:cv.toDataURL('image/jpeg',.9),done:finished,t:simT};},
   stats(mode,s,maxT,o={}){this.start(mode,s,o);while(!finished&&simT<maxT){tick(1/240);}const r=cur.info();r.dur=+simT.toFixed(1);r.notes=events.length;return r;},
   // lead : l'image n°k montre l'état à la fin de son intervalle (k+1)/fps mais s'affiche à k/fps ;

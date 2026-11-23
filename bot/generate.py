@@ -144,6 +144,26 @@ def platform_version(page, src, handle, dst, plat):
     mask.unlink()
 
 
+TEASERS = ["WAIT FOR IT", "WATCH THE END", "IT ENDS LIKE THIS", "DON'T SCROLL"]
+TEASER_LEN = 0.9
+
+
+def add_teaser(page, mp4, at):
+    """Accroche : une seconde du moment le plus fort, avec un texte, puis coupe franche vers le début."""
+    png = mp4.with_name(mp4.stem + "_teaser.png")
+    png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.teaserPng(t)", random.choice(TEASERS)).split(",")[1]))
+    out = mp4.with_name(mp4.stem + "_hook.mp4")
+    a, b = at, at + TEASER_LEN
+    filt = (f"[0:v]trim={a:.3f}:{b:.3f},setpts=PTS-STARTPTS,eq=brightness=0.04:contrast=1.08[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
+            f"[0:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=out:st={TEASER_LEN-0.15:.2f}:d=0.15[ta];"
+            f"[tvo][ta][0:v][0:a]concat=n=2:v=1:a=1[v][au]")
+    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-loop", "1", "-i", str(png), "-filter_complex", filt,
+                    "-map", "[v]", "-map", "[au]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out)], check=True)
+    png.unlink()
+    out.replace(mp4)
+
+
 def take_idea(mode):
     """Idée de la communauté pour ce format (ideas.json), créditée dans la vidéo et la légende."""
     if not IDEAS.exists():
@@ -272,7 +292,13 @@ def main():
         hue = random.choice([0, 40, 80, 140, 200, 260]) if MODES[mode]["hue"] else 0
         stamp = time.strftime("%Y%m%d-%H%M")
         mp4 = out / f"subliminal_{stamp}_{mode}_{ep}.mp4"
+        # moment montré en accroche : juste avant la fin (le plus spectaculaire), pris dans la durée connue
+        teaser_at = round(max(3.0, float(info.get("dur", 20)) * 0.8), 2)
+        opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
+        if teaser_at + TEASER_LEN < dur - 1:
+            add_teaser(page, mp4, teaser_at)
+            dur += TEASER_LEN
         files = {}
         for plat, h in HANDLES.items():
             dst = mp4.with_name(f"{mp4.stem}_{plat}.mp4")
