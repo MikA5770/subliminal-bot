@@ -99,16 +99,49 @@ def mark_battle_used(battle):
     BATTLES.write_text(json.dumps(bs, indent=2, ensure_ascii=False))
 
 
-def add_handle(page, src, handle, dst, dur):
-    """Identifiant en fond, constant (la vidéo boucle sur sa première image)."""
-    png = dst.with_suffix(".png")
-    png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
-    st = max(0, dur - 0.5)
-    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-loop", "1", "-t", f"{dur:.2f}", "-i", str(png),
-                    "-filter_complex", "[1]format=rgba[w];[0][w]overlay=shortest=1",
-                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy",
-                    "-movflags", "+faststart", str(dst)], check=True)
-    png.unlink()
+# Zones visibles de chaque appli sur une image 1080x1920 (gauche, haut, droite, bas) :
+# hors des boutons à droite, du texte et de la légende en bas, des onglets en haut.
+SAFE = {
+    "tiktok": (60, 130, 930, 1440),
+    "instagram": (65, 200, 900, 1500),
+    "youtube": (48, 120, 970, 1580),
+}
+# Partie de l'image où se trouve tout le contenu (numéro, accroche, simulation, compteur)
+CONTENT = (60, 130, 1020, 1540)
+
+
+def platform_version(page, src, handle, dst, plat):
+    """Recadre la vidéo pour que le contenu soit centré dans la zone visible de l'appli, puis ajoute l'identifiant."""
+    l, t, r, b = SAFE[plat]
+    cl, ct, cr, cb = CONTENT
+    s = min(1.0, (r - l) / (cr - cl), (b - t) / (cb - ct))
+    ox = round((l + r) / 2 - s * (cl + cr) / 2)
+    oy = round((t + b) / 2 - s * (ct + cb) / 2)
+    sw, sh = round(1080 * s / 2) * 2, round(1920 * s / 2) * 2
+    # bords de l'image réduite fondus dans le noir : aucune cassure visible
+    mask = dst.with_name(dst.stem + "_mask.png")
+    from PIL import Image, ImageFilter
+    m = Image.new("L", (sw, sh), 0)
+    m.paste(255, (70, 70, sw - 70, sh - 70))
+    m.filter(ImageFilter.GaussianBlur(28)).save(mask)
+    inputs = [FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-loop", "1", "-i", str(mask),
+              "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30"]
+    filt = (f"[0]scale={sw}:{sh},format=rgba[c];[1]format=gray[m];[c][m]alphamerge[v];"
+            f"[2][v]overlay={ox}:{oy}:shortest=1[b]")
+    png = None
+    if handle:
+        png = dst.with_suffix(".png")
+        png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
+        inputs += ["-loop", "1", "-i", str(png)]
+        wx, wy = round((l + r) / 2 - 540), round((t + b) / 2 - 1010)
+        filt += f";[3]format=rgba[w];[b][w]overlay={wx}:{wy}:shortest=1[o]"
+    else:
+        filt += ";[b]null[o]"
+    subprocess.run(inputs + ["-filter_complex", filt, "-map", "[o]", "-map", "0:a?", "-c:v", "libx264", "-preset", "veryfast",
+                             "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-shortest", "-movflags", "+faststart", str(dst)], check=True)
+    if png:
+        png.unlink()
+    mask.unlink()
 
 
 def take_idea(mode):
@@ -242,12 +275,9 @@ def main():
         dur = render(page, mode, seed, opts, mp4, hue)
         files = {}
         for plat, h in HANDLES.items():
-            if h:
-                dst = mp4.with_name(f"{mp4.stem}_{plat}.mp4")
-                add_handle(page, mp4, h, dst, dur)
-                files[plat] = dst.name
-            else:
-                files[plat] = mp4.name
+            dst = mp4.with_name(f"{mp4.stem}_{plat}.mp4")
+            platform_version(page, mp4, h, dst, plat)
+            files[plat] = dst.name
         browser.close()
         if errors:
             raise RuntimeError("Erreurs dans le moteur : " + "; ".join(errors))
