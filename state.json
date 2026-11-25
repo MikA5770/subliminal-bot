@@ -19,7 +19,8 @@
     "grow",
     "portal",
     "war",
-    "press"
+    "press",
+    "glass"
   ],
   "episodes": {
     "multiply": 2,
@@ -32,7 +33,7 @@
     "war": 2,
     "trail": 2,
     "split": 1,
-    "glass": 1,
+    "glass": 2,
     "press": 2,
     "portal": 1
   },
