@@ -20,13 +20,14 @@
     "portal",
     "war",
     "press",
-    "glass"
+    "glass",
+    "pendulum"
   ],
   "episodes": {
     "multiply": 2,
     "grow": 2,
     "battle": 1,
-    "pendulum": 1,
+    "pendulum": 2,
     "flags": 2,
     "crusher": 2,
     "bricks": 1,
