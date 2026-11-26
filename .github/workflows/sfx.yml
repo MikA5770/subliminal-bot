@@ -1,0 +1,24 @@
+name: Récupérer des bruitages (Openverse, CC0)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sfx:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Télécharger
+        run: python tools/fetch_sfx.py
+      - name: Enregistrer
+        run: |
+          git config user.name "subliminal-bot"
+          git config user.email "subliminal-bot@users.noreply.github.com"
+          git add sfx_raw
+          git commit -q -m "Bruitages Openverse (CC0)" || exit 0
+          git pull -q --rebase origin "${GITHUB_REF_NAME}"
+          git push -q origin "HEAD:${GITHUB_REF_NAME}"
