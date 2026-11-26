@@ -21,7 +21,8 @@
     "war",
     "press",
     "glass",
-    "pendulum"
+    "pendulum",
+    "grinder"
   ],
   "episodes": {
     "multiply": 2,
@@ -36,7 +37,8 @@
     "split": 1,
     "glass": 2,
     "press": 2,
-    "portal": 1
+    "portal": 1,
+    "grinder": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
