@@ -312,12 +312,17 @@ def platform_captions(mode, ep, hook, override=None):
            "question": m["question"], "hook_lc": hook.rstrip(".").lower()}
     extra = (override or {}).get("tags", [])
     note = "\n\nSimulation, not a prediction." if mode == "battle" else ""
+    if mode in BURST_KEYWORD:
+        # mot-clé à commenter : le levier n°1 des commentaires (693 sur la vidéo de référence)
+        note += "\n\nMade it to the end? Comment BOOM 💥"
     tiktok = _r.choice(TIKTOK_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(extra[:2] + _tags(mode, 1, 2, 1))
     insta = _r.choice(INSTAGRAM_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(extra[:2] + _tags(mode, 2, 2, 1))
     yt_tags = ["#shorts"] + extra[:1] + _r.sample(MODE_TAGS[mode], 1) + _r.sample(CORE_TAGS, 1)
     youtube = _r.choice(YOUTUBE_TEMPLATES).format(**ctx) + note + "\n\n" + " ".join(yt_tags)
     return {"tiktok": tiktok, "instagram": insta, "youtube": youtube}
 
+
+BURST_KEYWORD = ("stamps", "twin", "blender", "hunters", "spinners", "chompers")
 
 # ---------- Appels à l'action (fin de vidéo) ----------
 # Pas de "like si…" (pénalisé comme engagement-bait) : on pousse le follow par la série
@@ -333,6 +338,7 @@ CTA_COMMENT = {
     "pendulum": "Did you guess right?", "reveal": "At what % did you read it?", "piano": "Did you name it in time?",
     "war": "Did your color win?", "crusher": "Did your color win?", "flags": "Did your country win?",
     "rings": "Did you think it would make it?", "maze": "Did you think it would make it?",
+    **{m: "Saw it burst? Comment BOOM" for m in ("stamps", "twin", "blender", "hunters", "spinners", "chompers")},
 }
 
 

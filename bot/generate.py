@@ -147,14 +147,16 @@ def platform_version(page, src, handle, dst, plat):
 
 
 TEASERS = ["WAIT FOR IT", "WATCH THE END", "IT ENDS LIKE THIS", "DON'T SCROLL"]
+# formats qui explosent : on coupe 1 image AVANT l'explosion (boucle ouverte, la réponse est à la fin)
+BURST_TEASERS = ["WAIT FOR IT", "IT'S ABOUT TO BLOW", "DON'T BLINK", "3 SECONDS LEFT"]
 TEASER_LEN = 0.9
 BURST_MODES = ("stamps", "twin", "blender", "hunters", "spinners", "chompers")
 
 
-def add_teaser(page, mp4, at):
+def add_teaser(page, mp4, at, texts=None):
     """Accroche : une seconde du moment le plus fort, avec un texte, puis coupe franche vers le début."""
     png = mp4.with_name(mp4.stem + "_teaser.png")
-    png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.teaserPng(t)", random.choice(TEASERS)).split(",")[1]))
+    png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.teaserPng(t)", random.choice(texts or TEASERS)).split(",")[1]))
     out = mp4.with_name(mp4.stem + "_hook.mp4")
     # l'extrait est lu à part (2e entrée) : pas besoin de garder toute la vidéo en mémoire
     filt = (f"[2:v]setpts=PTS-STARTPTS,eq=brightness=0.04:contrast=1.08[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
@@ -300,11 +302,12 @@ def main():
         teaser_at = round(max(3.0, float(info.get("dur", 20)) * 0.8), 2)
         if mode in BURST_MODES:
             # le teaser montre l'explosion finale
-            teaser_at = round(float(info["dur"]) - 4.15, 2)
+            # explosion à dur - 3,8 s : l'extrait s'arrête une image avant
+            teaser_at = round(float(info["dur"]) - 3.8 - TEASER_LEN - 2 / FPS, 3)
         opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
         if teaser_at + TEASER_LEN < dur - 1:
-            add_teaser(page, mp4, teaser_at)
+            add_teaser(page, mp4, teaser_at, BURST_TEASERS if mode in BURST_MODES else None)
             dur += TEASER_LEN
         files = {}
         for plat, h in HANDLES.items():
