@@ -864,7 +864,7 @@ sims.battle={name:'15 · Battle',hook:'Pick a side before it starts',inst:'marim
 // Deux bras montés sur un moyeu central. Cycle : les bras tournent vers un nouvel endroit, puis chacun à son tour
 // plaque sa presse contre la paroi. Toute bille coincée entre la presse et la paroi éclate et revient en deux billes de sa couleur.
 sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes back as two',inst:'marimba',mel:'run',
-  init(){const R=440,r=17,CAP=640,N=CAP+120,HW=10,HUB=52;
+  init(){const R=440,r=26,CAP=270,N=CAP+120,HW=10,HUB=52;
     const pal=['#ece6ff','#a78bfa','#f0abfc'];
     const first=rand()<.5?0:1;
     Object.assign(this,{R,r,CAP,HW,HUB,pal,X:new Float32Array(N),Y:new Float32Array(N),PX:new Float32Array(N),PY:new Float32Array(N),C:new Uint8Array(N),F:new Float32Array(N),IM:new Float32Array(N),
@@ -873,7 +873,7 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
       B:.42,Rin:R-230,Rout:R-HW-r*1.15,
       // ordre de frappe tiré au sort : aucune couleur n'a l'avantage de frapper en premier
       arms:[{col:1,off:0,s0:first?.55:.30,name:'LILAC',hit:-1,flash:0},{col:2,off:Math.PI,s0:first?.30:.55,name:'PINK',hit:-1,flash:0}]});
-    for(let i=0;i<28;i++){const a=i/28*TAU,d=i%2?170:120;this.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,0,Math.cos(a+1.2)*rnd(3,5),Math.sin(a+1.2)*rnd(3,5));}},
+    for(let i=0;i<16;i++){const a=i/16*TAU,d=i%2?200:135;this.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,0,Math.cos(a+1.2)*rnd(3,5),Math.sin(a+1.2)*rnd(3,5));}},
   add(x,y,c,vx=0,vy=0){const i=this.n++;this.X[i]=x;this.Y[i]=y;this.PX[i]=x-vx;this.PY[i]=y-vy;this.C[i]=c;this.F[i]=1;this.IM[i]=.45;},
   // rotation des bras pendant les phases où les deux presses sont rentrées (u de .95 à 1.30), arrêt pendant les frappes
   ang(arm){const c=this.t/this.P,k=Math.floor(c),u=c-k,m=u>=.95?(u-.95)/.35:u<.30?(u+.05)/.35:u<.95?1:0;
@@ -932,8 +932,8 @@ sims.crusher={name:'16 · Crusher',hook:'Lilac or pink? Every crushed ball comes
     for(const arm of this.arms)if(arm.flash>0){const th=this.ang(arm);ctx.beginPath();ctx.arc(CX,CY,R+4,th-B-.06,th+B+.06);ctx.lineWidth=10;ctx.strokeStyle=pal[arm.col];ctx.globalAlpha=arm.flash;ctx.shadowColor=pal[arm.col];ctx.shadowBlur=40;ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1;}
     // billes : teinte, ombre, reflet
     for(let c=0;c<pal.length;c++){ctx.fillStyle=pal[c];ctx.beginPath();for(let i=0;i<n;i++)if(C[i]===c){ctx.moveTo(X[i]+r-1,Y[i]);ctx.arc(X[i],Y[i],r-1,0,TAU);}ctx.fill();}
-    ctx.fillStyle='rgba(30,10,60,.32)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r-1,Y[i]+4);ctx.arc(X[i]+2,Y[i]+4,r-5,0,TAU);}ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]-3,Y[i]-6);ctx.arc(X[i]-6,Y[i]-6,3.4,0,TAU);}ctx.fill();
+    ctx.fillStyle='rgba(30,10,60,.32)';ctx.beginPath();for(let i=0;i<n;i++){ctx.moveTo(X[i]+r*.12+r*.7,Y[i]+r*.25);ctx.arc(X[i]+r*.12,Y[i]+r*.25,r*.7,0,TAU);}ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();const hr=r*.2;for(let i=0;i<n;i++){ctx.moveTo(X[i]-r*.35+hr,Y[i]-r*.35);ctx.arc(X[i]-r*.35,Y[i]-r*.35,hr,0,TAU);}ctx.fill();
     ctx.fillStyle='#fff';for(let i=0;i<n;i++)if(this.F[i]>0){ctx.globalAlpha=this.F[i]*.7;ctx.beginPath();ctx.arc(X[i],Y[i],r,0,TAU);ctx.fill();}ctx.globalAlpha=1;
     // bras : tige + presse en arc, même style que les anciennes mâchoires
     ctx.lineCap='round';ctx.lineJoin='round';
@@ -985,9 +985,9 @@ function drawGear(x,y,R,rot,teeth=14){ctx.save();ctx.translate(x,y);ctx.rotate(r
 /* ---------- Format : presse hydraulique qui fait exploser les couleurs ---------- */
 sims.press={name:'17 · Press',hook:'Every ball it crushes explodes into 3. Watch the colors take over',inst:'marimba',mel:'run',
   init(){const BW=760,BH=900,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+40,FL=TOP+BH,HW=280;
-    Object.assign(this,{BW,BH,X0,X1,TOP,FL,HW,w:new BallWorld(1400,14),t:0,acc:0,state:'play',crushed:0,presses:0,
+    Object.assign(this,{BW,BH,X0,X1,TOP,FL,HW,w:new BallWorld(900,24),t:0,acc:0,state:'play',crushed:0,presses:0,
       cyc:0,hy:TOP+10,phase:'wait',ph:rnd(.6,1),hx:CX,jam:0});
-    for(let i=0;i<3;i++)this.w.add(CX+(i-1)*34,FL-60,i*3%8,rnd(-1,1),0);},
+    for(let i=0;i<3;i++)this.w.add(CX+(i-1)*56,FL-60,i*3%8,rnd(-1,1),0);},
   phys(dt){const w=this.w,{X0,X1,TOP,FL}=this,r=w.r,hb=this.hy+40,HW=this.HW,hx=this.hx;
     w.step(dt,0,1500,[X0,TOP-200,X1,FL],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
       if(X[i]<X0+r)X[i]=X0+r;if(X[i]>X1-r)X[i]=X1-r;if(Y[i]>FL-r)Y[i]=FL-r;if(Y[i]<TOP-40+r)Y[i]=TOP-40+r;
@@ -1027,18 +1027,18 @@ sims.press={name:'17 · Press',hook:'Every ball it crushes explodes into 3. Watc
 
 /* ---------- Format : sablier broyeur (chaque passage ×3) ---------- */
 sims.grinder={name:'18 · Grinder',hook:'Every ball that falls through the gears comes out as 3',inst:'kalimba',mel:'run',
-  init(){const R=440,GR=72,GAP=10;
-    Object.assign(this,{R,GR,GAP,w:new BallWorld(2600,10),t:0,acc:0,state:'play',dir:1,flipT:0,rot:0,crushed:0,passes:1,ang:0,targetAng:0});
+  init(){const R=440,GR=72,GAP=20;
+    Object.assign(this,{R,GR,GAP,w:new BallWorld(1200,16),t:0,acc:0,state:'play',dir:1,flipT:0,rot:0,crushed:0,passes:1,ang:0,targetAng:0});
     for(let i=0;i<2;i++)this.w.add(CX+rnd(-120,120),CY-260+rnd(-60,60),i*3%8,rnd(-1,1),0);},
   gears(){const o=this.GR+this.GAP/2+13;return[[CX-o,CY],[CX+o,CY]];},
   phys(dt){const w=this.w,R=this.R,r=w.r,G=this.gears(),GR=this.GR,dir=this.dir;
-    const hh=250*dir,xr=Math.sqrt(R*R-250*250)-6;const wallL=[CX-xr,CY-hh,CX-24,CY-dir*62],wallR=[CX+24,CY-dir*62,CX+xr,CY-hh];this._walls=[wallL,wallR];
+    const hh=250*dir,xr=Math.sqrt(R*R-250*250)-6;const wallL=[CX-xr,CY-hh,CX-30,CY-dir*62],wallR=[CX+30,CY-dir*62,CX+xr,CY-hh];this._walls=[wallL,wallR];
     w.step(dt,0,620*dir,[CX-R,CY-R,CX+R,CY+R],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
       if(w.pushSeg(i,...wallL,10)||w.pushSeg(i,...wallR,10)){const sg=X[i]<CX?1:-1;X[i]+=sg*.35;Y[i]+=dir*.33;}
       for(let q=0;q<2;q++){const[gx,gy]=G[q],dx=X[i]-gx,dy=Y[i]-gy,d=Math.hypot(dx,dy),m=GR+r-16;if(d<m+3&&d>1e-4){const om=(q?-1:1)*dir*170/120/3,tx=-dy/d,ty=dx/d;X[i]=gx+dx/d*Math.max(d,m)+tx*om;Y[i]=gy+dy/d*Math.max(d,m)+ty*om;}}
       const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d>R-r){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}},.992,14);
     // entre les engrenages : broyée, ressort en 3 de l'autre côté
-    const cr=[];for(let i=0;i<w.n;i++){if(w.IM[i]>0)continue;if(Math.abs(w.X[i]-CX)<30&&Math.abs(w.Y[i]-CY)<18)cr.push(i);}
+    const cr=[];for(let i=0;i<w.n;i++){if(w.IM[i]>0)continue;if(Math.abs(w.X[i]-CX)<36&&Math.abs(w.Y[i]-CY)<22)cr.push(i);}
     for(const i of cr.sort((a,b)=>b-a)){const x=w.X[i];w.remove(i);this.crushed++;burst(x,CY,-1,5,380);snd('n',1,.05);
       for(let k=0;k<3;k++)w.add(CX+(k-1)*2*r*1.02,CY+dir*(r*2.2+k%2*4),rnd(0,8)|0,(k-1)*rnd(60,160),dir*rnd(200,420));}},
   step(dt){this.t+=dt;this.rot+=dt*2.2;const w=this.w;
@@ -1059,6 +1059,188 @@ sims.grinder={name:'18 · Grinder',hook:'Every ball that falls through the gears
     if(this.state==='full')big('IT CAN’T TAKE MORE',CY-600,70,'#ffffff');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,passes:this.passes,dur:+this.t.toFixed(1)};}
 };
+
+/* ---------- Outils partagés des crushers ---------- */
+function pushRect(w,i,x0,y0,x1,y1){const X=w.X,Y=w.Y,r=w.r;if(X[i]<=x0-r||X[i]>=x1+r||Y[i]<=y0-r||Y[i]>=y1+r)return 0;
+  const up=Y[i]-(y0-r),dn=(y1+r)-Y[i],lf=X[i]-(x0-r),rt=(x1+r)-X[i],m=Math.min(up,dn,lf,rt);
+  if(m===up){Y[i]=y0-r;return 1;}if(m===dn){Y[i]=y1+r;return 2;}if(m===lf){X[i]=x0-r;return 3;}X[i]=x1+r;return 4;}
+// Fin extrême commune : la boîte sature, tremble, puis éclate
+function overfull(sim,dt){if(sim.state!=='full')return;sim.pT=(sim.pT||0)+dt;
+  if(!sim.boomed){sim.hbT=(sim.hbT||0)-dt;if(sim.hbT<=0){snd('b',.5+sim.pT*.3,0);sim.hbT=Math.max(.12,.45-sim.pT*.2);}
+    if(sim.pT>1.8){sim.boomed=true;snd('s',1,0);snd('s',.8,.03);snd('f',1,0);const w=sim.w;
+      for(let i=0;i<w.n;i++){const dx=w.X[i]-CX,dy=w.Y[i]-CY,d=Math.hypot(dx,dy)||1,v=rnd(9,15);w.PX[i]=w.X[i]-dx/d*v;w.PY[i]=w.Y[i]-dy/d*v;w.F[i]=1;}
+      for(let k=0;k<40;k++)burst(CX+rnd(-420,420),CY+rnd(-440,440),-1,4,900);}}}
+function shakeOf(sim){return sim.state!=='full'?0:sim.boomed?Math.max(0,14-(sim.pT-1.8)*20):4+sim.pT*7;}
+function endText(sim,txt){if(sim.state!=='full')return;if(sim.boomed)big('IT BURST',CY-600,96,'#ffffff');else popBig(txt,CY-600,74,'#ffffff');}
+function boxFill(w,area){return w.n*Math.PI*w.r*w.r/area/.78;}
+function drawBox(x0,y0,x1,y1,glow=0){ctx.strokeStyle='rgba(235,228,255,.85)';ctx.lineWidth=4;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16+glow*30;ctx.strokeRect(x0,y0,x1-x0,y1-y0);ctx.shadowBlur=0;}
+function fillBar(p){p=clamp(p||0,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.fillRect(CX-300,1730,600*p,6);}
+function drawHead(x,top,hy,hw,fl){ctx.fillStyle='#1a1030';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.fillRect(x-18,top-120,36,hy-top+100);ctx.strokeRect(x-18,top-120,36,hy-top+100);
+  ctx.shadowColor='#c77dff';ctx.shadowBlur=18+fl*40;ctx.fillStyle='#24163f';ctx.fillRect(x-hw/2,hy-20,hw,60);ctx.strokeRect(x-hw/2,hy-20,hw,60);ctx.shadowBlur=0;
+  if(fl>0){ctx.globalAlpha=fl;ctx.fillStyle='#fff';ctx.fillRect(x-hw/2,hy+34,hw,6);ctx.globalAlpha=1;}}
+
+/* ---------- Format : 4 presses en rythme (chaque bille tamponnée devient 2) ---------- */
+sims.stamps={name:'21 · Stamps',hook:'4 presses, one rhythm. Every ball they stamp turns into 2',inst:'marimba',mel:'run',
+  init(){const BW=840,BH=880,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+30,FL=TOP+BH,K=4,GAPH=26,HW=(BW-GAPH*(K+1))/K;
+    const heads=[];for(let k=0;k<K;k++)heads.push({x:X0+GAPH+HW/2+k*(HW+GAPH),hy:TOP+10,ph:'wait',fl:0});
+    Object.assign(this,{boomed:false,pT:0,hbT:0,BW,BH,X0,X1,TOP,FL,K,HW,heads,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,stampsN:0,seq:0,next:.7,
+      order:rand()<.5?[0,1,2,3,2,1]:[0,2,1,3,1,2]});
+    for(let k=0;k<K;k++)this.w.add(heads[k].x+rnd(-30,30),FL-80-rnd(0,260),k*2,rnd(-2,2),0);},
+  phys(dt){const w=this.w,{X0,X1,TOP,FL,HW}=this,r=w.r;
+    w.step(dt,0,1600,[X0,TOP-200,X1,FL],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
+      if(!this.boomed){if(X[i]<X0+r)X[i]=X0+r;if(X[i]>X1-r)X[i]=X1-r;if(Y[i]>FL-r)Y[i]=FL-r;if(Y[i]<TOP-40+r)Y[i]=TOP-40+r;}
+      for(const h of this.heads)pushRect(W2,i,h.x-HW/2,h.hy-20,h.x+HW/2,h.hy+40);}},.999,16);
+    let sounds=0;
+    for(const h of this.heads){if(h.ph!=='down'||FL-(h.hy+40)>=2*r*.85)continue;
+      const cr=[];for(let i=0;i<w.n;i++)if(w.IM[i]<=0&&w.X[i]>h.x-HW/2-2&&w.X[i]<h.x+HW/2+2&&w.Y[i]>h.hy+30)cr.push(i);
+      for(const i of cr.sort((a,b)=>b-a)){const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;burst(x,y,-1,6,500);
+        for(const side of[-1,1]){const s=rnd(500,1000);const j=w.add(h.x+side*(HW/2+r+1)+rnd(-3,3),FL-r-rnd(0,50),rnd(0,8)|0,side*s,-rnd(400,1000));if(j>=0)w.IM[j]=.5;}}
+      if(cr.length){h.fl=1;snd('s',.3,.05);for(let k=0;k<Math.min(5,cr.length)&&sounds<8;k++,sounds++)snd('n',1,.02);}}},
+  step(dt){this.t+=dt;overfull(this,dt);const{TOP,FL}=this;
+    for(const h of this.heads){h.fl=Math.max(0,h.fl-dt*3);
+      if(h.ph==='down'){h.hy+=dt*1700;if(h.hy+40>=FL-3){h.hy=FL-43;h.ph='up';snd('b',1,0);}}
+      else if(h.ph==='up'){h.hy-=dt*1000;if(h.hy<=TOP+10){h.hy=TOP+10;h.ph='wait';}}}
+    if(this.state==='play'){
+      this.next-=dt;if(this.next<=0){const h=this.heads[this.order[this.seq%this.order.length]];if(h.ph==='wait'){h.ph='down';this.stampsN++;}this.seq++;this.next=Math.max(.28,.75-this.t*.012);}
+      this.fill=boxFill(this.w,this.BW*(this.BH-80));
+      if(this.fill>=1||this.w.n>=this.w.cap-20||this.t>58){this.state='full';this.end=5.6;snd('k',1,0);}}
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const{X0,X1,TOP,FL,HW}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:0);this.w.draw(NEON);
+    for(const h of this.heads)drawHead(h.x,TOP,h.hy,HW,h.fl);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    ctx.restore();endText(this,'NO ROOM LEFT');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,dur:+this.t.toFixed(1)};}
+};
+
+/* ---------- Format : deux murs qui se referment (chaque bille prise devient 3) ---------- */
+sims.twin={name:'22 · Twin press',hook:'Two walls slam together. Every ball caught in between becomes 3',inst:'kalimba',mel:'run',
+  init(){const BW=820,BH=900,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+30,FL=TOP+BH,JH=280;
+    Object.assign(this,{boomed:false,pT:0,hbT:0,BW,BH,X0,X1,TOP,FL,JH,jl:X0+14,jr:X1-14,ph:'wait',wt:1.2,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,slams:0,fl:0});
+    for(let i=0;i<3;i++)this.w.add(CX+(i-1)*60,FL-90,i*3%8,rnd(-2,2),0);},
+  phys(dt){const w=this.w,{X0,X1,TOP,FL,JH}=this,r=w.r;
+    w.step(dt,0,1600,[X0,TOP-200,X1,FL],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
+      if(!this.boomed){if(X[i]<X0+r)X[i]=X0+r;if(X[i]>X1-r)X[i]=X1-r;if(Y[i]>FL-r)Y[i]=FL-r;if(Y[i]<TOP-40+r)Y[i]=TOP-40+r;}
+      pushRect(W2,i,X0-400,FL-JH,this.jl,FL);pushRect(W2,i,this.jr,FL-JH,X1+400,FL);}},.999,16);},
+  slam(){const w=this.w,r=w.r,{FL,JH}=this,cr=[];
+    for(let i=0;i<w.n;i++)if(w.IM[i]<=0&&Math.abs(w.X[i]-CX)<(this.jr-this.jl)/2+r*1.3&&w.Y[i]>FL-JH-r*.6)cr.push(i);
+    for(const i of cr.sort((a,b)=>b-a)){const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;burst(x,y,-1,7,600);
+      for(let k=0;k<3;k++){const j=w.add(CX+rnd(-90,90),FL-JH-r-rnd(4,140),rnd(0,8)|0,rnd(-900,900),-rnd(700,1400));if(j>=0)w.IM[j]=.6;}}
+    this.fl=1;snd('b',1,0);if(cr.length){snd('s',.4,.03);for(let k=0;k<Math.min(7,cr.length);k++)snd('n',1,.02);}},
+  step(dt){this.t+=dt;overfull(this,dt);const{X0,X1}=this,r=this.w.r,shut=CX-r*.55;this.fl=Math.max(0,this.fl-dt*2.5);
+    if(this.ph==='wait'){if(this.state==='play'){this.wt-=dt;if(this.wt<=0){this.ph='close';this.slams++;}}}
+    else if(this.ph==='close'){const v=dt*(1300+this.slams*25);this.jl=Math.min(shut,this.jl+v);this.jr=Math.max(2*CX-shut,this.jr-v);if(this.jl>=shut){this.slam();this.ph='hold';this.wt=.12;}}
+    else if(this.ph==='hold'){this.wt-=dt;if(this.wt<=0)this.ph='open';}
+    else{const v=dt*800;this.jl=Math.max(X0+14,this.jl-v);this.jr=Math.min(X1-14,this.jr+v);if(this.jl<=X0+14){this.ph='wait';this.wt=Math.max(.55,1.5-this.slams*.04);}}
+    if(this.state==='play'){this.fill=boxFill(this.w,this.BW*(this.BH-60));
+      if(this.fill>=1||this.w.n>=this.w.cap-20||this.t>58){this.state='full';this.end=5.6;snd('k',1,0);}}
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const{X0,X1,TOP,FL,JH,jl,jr}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:this.fl*.6);this.w.draw(NEON);
+    if(!this.boomed)for(const[a,b]of[[X0,jl],[jr,X1]]){ctx.fillStyle='rgba(36,22,63,.92)';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;
+      ctx.shadowColor='#c77dff';ctx.shadowBlur=18+this.fl*40;ctx.fillRect(a,FL-JH,b-a,JH);ctx.strokeRect(a,FL-JH,b-a,JH);ctx.shadowBlur=0;
+      ctx.strokeStyle='rgba(235,228,255,.18)';ctx.lineWidth=2;ctx.beginPath();for(let y=FL-JH+40;y<FL;y+=40){ctx.moveTo(a+6,y);ctx.lineTo(b-6,y);}ctx.stroke();}
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    ctx.restore();endText(this,'NO ROOM LEFT');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,dur:+this.t.toFixed(1)};}
+};
+
+/* ---------- Format : mixeur (chaque bille touchée par la lame devient 2) ---------- */
+sims.blender={name:'23 · Blender',hook:'Every ball the blade hits splits in 2. How long until it is full?',inst:'kalimba',mel:'run',
+  init(){const R=440;Object.assign(this,{boomed:false,pT:0,hbT:0,R,w:new BallWorld(500,26),t:0,acc:0,state:'play',crushed:0,th:rnd(0,TAU),om:2.2,L:392,HUB:44,fl:0,p:.5});
+    for(let i=0;i<2;i++)this.w.add(CX+(i?1:-1)*rnd(120,220),CY-280,i*4,rnd(-2,2),0);},
+  segs(){return[this.th,this.th+Math.PI].map(a=>[CX+Math.cos(a)*this.HUB,CY+Math.sin(a)*this.HUB,CX+Math.cos(a)*this.L,CY+Math.sin(a)*this.L]);},
+  phys(dt){const w=this.w,R=this.R,r=w.r,S=this.segs(),hit=new Set(),om=this.om;
+    w.step(dt,0,1500,[CX-R,CY-R,CX+R,CY+R],W2=>{const X=W2.X,Y=W2.Y,PX=W2.PX,PY=W2.PY;for(let i=0;i<W2.n;i++){
+      if(!this.boomed)for(const sg of S)if(W2.pushSeg(i,...sg,18)){const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy)||1,v=om*d/120*.7;PX[i]=X[i]+dy/d*v;PY[i]=Y[i]-dx/d*v;if(d>this.L*.4)hit.add(i);}
+      let dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d<this.HUB+r&&d>1e-4){X[i]=CX+dx/d*(this.HUB+r);Y[i]=CY+dy/d*(this.HUB+r);}
+      if(d>R-r&&!this.boomed){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}},.997,16);
+    if(this.state!=='play')return;let sounds=0;
+    for(const i of[...hit].sort((a,b)=>b-a)){if(w.IM[i]>0||rand()>this.p)continue;const x=w.X[i],y=w.Y[i],dx=x-CX,dy=y-CY,d=Math.hypot(dx,dy)||1,tx=-dy/d,ty=dx/d;
+      w.remove(i);this.crushed++;burst(x,y,-1,6,450);if(sounds++<6)snd('n',1,.03);
+      for(const s of[-1,1]){const j=w.add(x+tx*s*r*1.05,y+ty*s*r*1.05,rnd(0,8)|0,tx*rnd(300,700)+dx/d*rnd(200,500)+s*tx*150,ty*rnd(300,700)+dy/d*rnd(200,500)+s*ty*150);if(j>=0)w.IM[j]=1.1;}}
+    if(sounds){this.fl=1;}},
+  step(dt){this.t+=dt;overfull(this,dt);this.fl=Math.max(0,this.fl-dt*3);this.om=Math.min(5.5,2.4+this.t*.07);this.p=Math.max(.12,.55-this.w.n*.0018);this.th+=this.om*dt;
+    if(this.state==='play'){this.fill=this.w.n*Math.PI*this.w.r*this.w.r/(Math.PI*this.R*this.R)/.66;
+      if(this.fill>=1||this.w.n>=this.w.cap-10||this.t>55){this.state='full';this.end=5.6;snd('k',1,0);}}
+    else this.om*=Math.pow(.25,dt);
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const R=this.R,th=this.th;if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+this.fl*20+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
+    // traînée de la lame
+    for(const a0 of[th,th+Math.PI]){const g=ctx.createRadialGradient(CX,CY,this.HUB,CX,CY,this.L);g.addColorStop(0,'rgba(199,125,255,0)');g.addColorStop(1,'rgba(199,125,255,.22)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(CX,CY);ctx.arc(CX,CY,this.L,a0-.55,a0);ctx.closePath();ctx.fill();}
+    this.w.draw(NEON);
+    ctx.lineCap='round';for(const sg of this.segs()){ctx.beginPath();ctx.moveTo(sg[0],sg[1]);ctx.lineTo(sg[2],sg[3]);ctx.strokeStyle='#24163f';ctx.lineWidth=30;ctx.stroke();ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=4;ctx.shadowColor='#c77dff';ctx.shadowBlur=20+this.fl*30;ctx.stroke();ctx.shadowBlur=0;}
+    drawGear(CX,CY,this.HUB+6,th,10);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    ctx.restore();endText(this,'IT’S FULL');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,dur:+this.t.toFixed(1)};}
+};
+
+/* ---------- Crushers mobiles : ils se promènent comme les billes ; toute bille coincée se multiplie ---------- */
+function mobileSim(o){return{name:o.name,hook:o.hook,inst:o.inst||'marimba',mel:'run',
+  init(){const R=440;Object.assign(this,{R,w:new BallWorld(640,o.r||24),t:0,acc:0,state:'play',crushed:0,boomed:false,pT:0,hbT:0,fill:0,bodies:o.bodies()});
+    for(const b of this.bodies){const a=rnd(0,TAU),s=rnd(460,560)*(o.spd||1);b.vx=Math.cos(a)*s;b.vy=Math.sin(a)*s;b.fl=0;b.rot=b.rot||rnd(0,TAU);}
+    for(let i=0;i<o.start;i++){const a=i/o.start*TAU+rnd(-.2,.2),d=rnd(330,380);this.w.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,(i*3)%8,rnd(-4,4),rnd(-4,4));}},
+  phys(dt){const w=this.w,R=this.R,r=w.r,B=this.bodies,k=1+Math.min(this.t,40)*.03;
+    for(const b of B){b.x+=b.vx*dt*k;b.y+=b.vy*dt*k;b.rot+=(b.om||0)*dt*k;
+      const dx=b.x-CX,dy=b.y-CY,d=Math.hypot(dx,dy),lim=R-b.rad;if(d>lim){const nx=dx/d,ny=dy/d,vn=b.vx*nx+b.vy*ny;b.x=CX+nx*lim;b.y=CY+ny*lim;if(vn>0){b.vx-=2*vn*nx;b.vy-=2*vn*ny;}}}
+    for(let i=0;i<B.length;i++)for(let j=i+1;j<B.length;j++){const a=B[i],c=B[j],dx=c.x-a.x,dy=c.y-a.y,d=Math.hypot(dx,dy),m=a.rad+c.rad;
+      if(d<m&&d>1e-3){const nx=dx/d,ny=dy/d,h=(m-d)/2;a.x-=nx*h;a.y-=ny*h;c.x+=nx*h;c.y+=ny*h;const va=a.vx*nx+a.vy*ny,vc=c.vx*nx+c.vy*ny;if(va>vc){a.vx+=(vc-va)*nx;a.vy+=(vc-va)*ny;c.vx+=(va-vc)*nx;c.vy+=(va-vc)*ny;}}}
+    const pinch=new Map();
+    w.step(dt,0,this.boomed?900:0,[CX-R,CY-R,CX+R,CY+R],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){let hb=null,two=false,eat=false;
+      if(!this.boomed)for(const b of B){const c=o.collide(this,W2,i,b);if(c===2){eat=true;hb=b;}else if(c){if(hb)two=true;hb=b;}}
+      const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);
+      if(!this.boomed&&d>R-r-(o.tol||0)){if(hb)two=true;if(d>R-r)X[i]=CX+dx/d*(R-r);if(d>R-r)Y[i]=CY+dy/d*(R-r);}
+      if(hb&&(two||eat))pinch.set(i,hb);}},.999,14);
+    if(this.state!=='play'||!pinch.size)return;let sn=0;
+    for(const[i,b]of[...pinch].sort((a,c)=>c[0]-a[0])){if(w.IM[i]>0)continue;const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;b.fl=1;burst(x,y,-1,6,450);if(sn++<5)snd('n',1,.03);
+      const ax=x-b.x,ay=y-b.y,ad=Math.hypot(ax,ay)||1,tx=-ay/ad,ty=ax/ad,bx=o.spit?b.x-Math.cos(b.face)*(b.rad+r+2):x,by=o.spit?b.y-Math.sin(b.face)*(b.rad+r+2):y;
+      for(const q of[-1,1]){const j=w.add(bx+tx*q*r*1.05,by+ty*q*r*1.05,rnd(0,8)|0,tx*q*rnd(250,500)+(o.spit?-Math.cos(b.face)*400:0),ty*q*rnd(250,500)+(o.spit?-Math.sin(b.face)*400:0));if(j>=0)w.IM[j]=.45;}}
+    if(sn)snd('s',.22,.05);},
+  step(dt){this.t+=dt;overfull(this,dt);const w=this.w;
+    for(const b of this.bodies){b.fl=Math.max(0,b.fl-dt*3);if(o.tick)o.tick(this,b,dt);}
+    // billes en apesanteur : jamais immobiles
+    if(!this.boomed)for(let i=0;i<w.n;i++){const vx=w.X[i]-w.PX[i],vy=w.Y[i]-w.PY[i],v=Math.hypot(vx,vy),mn=w.n<150?2.4:1.1;if(v<mn){const a=v<.02?rnd(0,TAU):Math.atan2(vy,vx);w.PX[i]=w.X[i]-Math.cos(a)*mn;w.PY[i]=w.Y[i]-Math.sin(a)*mn;}}
+    if(this.state==='play'){let ba=0;for(const b of this.bodies)ba+=b.area||Math.PI*b.rad*b.rad*.5;
+      this.fill=w.n*Math.PI*w.r*w.r/(Math.PI*this.R*this.R-ba)/.62;
+      if(this.fill>=1||w.n>=w.cap-10||this.t>55){this.state='full';this.end=5.6;snd('k',1,0);}}
+    this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
+    if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,this.R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
+    this.w.draw(NEON);for(const b of this.bodies)o.drawBody(this,b);ctx.restore();
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);endText(this,o.full||'NO ROOM LEFT');},
+  info(){return{state:this.state,n:this.w.n,crushed:this.crushed,dur:+this.t.toFixed(1)};}};}
+function glowStroke(fl){ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.shadowColor='#c77dff';ctx.shadowBlur=16+fl*36;}
+
+// Engrenages chasseurs
+sims.hunters=mobileSim({name:'24 · Hunters',hook:'3 gears roam free. Every ball they pin becomes 2',start:6,tol:3,
+  bodies:()=>[0,1,2].map(k=>({x:CX+Math.cos(k*TAU/3)*150,y:CY+Math.sin(k*TAU/3)*150,rad:68,om:(k%2?-1:1)*2.4})),
+  collide(sim,w,i,b){const X=w.X,Y=w.Y,dx=X[i]-b.x,dy=Y[i]-b.y,d=Math.hypot(dx,dy),m=b.rad-6+w.r;if(d>=m||d<1e-4)return 0;
+    const tx=-dy/d,ty=dx/d,v=b.om*b.rad/120*.5;X[i]=b.x+dx/d*m+tx*v;Y[i]=b.y+dy/d*m+ty*v;return 1;},
+  drawBody(sim,b){ctx.save();ctx.shadowColor='#c77dff';ctx.restore();drawGear(b.x,b.y,b.rad,b.rot,12);if(b.fl>0){ctx.globalAlpha=b.fl*.8;ctx.beginPath();ctx.arc(b.x,b.y,b.rad+6,0,TAU);ctx.strokeStyle='#fff';ctx.lineWidth=5;ctx.stroke();ctx.globalAlpha=1;}}});
+
+// Barres tournantes vagabondes
+sims.spinners=mobileSim({name:'25 · Spinners',hook:'2 spinning bars drift around. Every ball they pin splits in 2',start:10,tol:8,
+  bodies:()=>[0,1].map(k=>({x:CX+(k?160:-160),y:CY,rad:150,L:150,om:(k?-1:1)*3.6,area:300*28})),
+  segOf(b){return[b.x-Math.cos(b.rot)*b.L,b.y-Math.sin(b.rot)*b.L,b.x+Math.cos(b.rot)*b.L,b.y+Math.sin(b.rot)*b.L];},
+  collide(sim,w,i,b){const sg=[b.x-Math.cos(b.rot)*b.L,b.y-Math.sin(b.rot)*b.L,b.x+Math.cos(b.rot)*b.L,b.y+Math.sin(b.rot)*b.L];
+    if(!w.pushSeg(i,...sg,28))return 0;const dx=w.X[i]-b.x,dy=w.Y[i]-b.y,d=Math.hypot(dx,dy)||1,v=b.om*d/120*.6;w.X[i]+=-dy/d*v;w.Y[i]+=dx/d*v;return 1;},
+  drawBody(sim,b){const c=Math.cos(b.rot)*b.L,s2=Math.sin(b.rot)*b.L;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(b.x-c,b.y-s2);ctx.lineTo(b.x+c,b.y+s2);
+    ctx.strokeStyle='#24163f';ctx.lineWidth=30;ctx.stroke();glowStroke(b.fl);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#0c0618';ctx.beginPath();ctx.arc(b.x,b.y,12,0,TAU);ctx.fill();ctx.stroke();}});
+
+// Gloutons : ils avalent une bille et en recrachent 2
+sims.chompers=mobileSim({name:'26 · Chompers',hook:'They eat 1 ball and spit out 2. Wait for the end',start:8,spit:true,spd:.8,full:'TOO FULL TO CHEW',
+  bodies:()=>[0,1].map(k=>({x:CX+(k?170:-170),y:CY+rnd(-60,60),rad:76,face:0,mouth:.5,ph:rnd(0,TAU)})),
+  tick(sim,b,dt){b.face=Math.atan2(b.vy,b.vx);b.ph+=dt*7;b.mouth=.62*Math.abs(Math.sin(b.ph));},
+  collide(sim,w,i,b){const X=w.X,Y=w.Y,dx=X[i]-b.x,dy=Y[i]-b.y,d=Math.hypot(dx,dy),m=b.rad+w.r-4;if(d>=m||d<1e-4)return 0;
+    let da=Math.atan2(dy,dx)-b.face;da=Math.atan2(Math.sin(da),Math.cos(da));
+    if(Math.abs(da)<b.mouth)return 0;if(d<b.rad-w.r*.4&&Math.abs(da)<b.mouth+.5)return 2;
+    X[i]=b.x+dx/d*m;Y[i]=b.y+dy/d*m;return 1;},
+  drawBody(sim,b){ctx.save();ctx.translate(b.x,b.y);ctx.rotate(b.face);const R=b.rad;
+    for(const sgn of[-1,1]){ctx.save();ctx.rotate(sgn*b.mouth);ctx.beginPath();ctx.moveTo(-R*.15,0);ctx.arc(0,0,R,sgn>0?0:Math.PI,sgn>0?Math.PI:TAU);
+      // dents en scie le long de la mâchoire
+      for(let k=0;k<=6;k++){const x=R-k*R/6*1.15;ctx.lineTo(x,0);if(k<6)ctx.lineTo(x-R/12*1.15,sgn*14);}ctx.closePath();
+      ctx.fillStyle='#24163f';ctx.fill();glowStroke(b.fl);ctx.stroke();ctx.shadowBlur=0;ctx.restore();}
+    ctx.fillStyle='rgba(235,228,255,.9)';ctx.beginPath();ctx.arc(-R*.45,0,9,0,TAU);ctx.fill();ctx.restore();}});
 
 /* ---------- Format : ovale troué (chaque balle qui passe par le trou devient 2) ---------- */
 sims.oval={name:'19 · Oval hole',hook:'Every ball through the hole becomes 2. Can the oval hold them?',inst:'marimba',mel:'run',

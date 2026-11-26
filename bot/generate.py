@@ -20,7 +20,7 @@ from content import INSTRUMENTS, MELODIES, MODES, SECRET_WORDS, SONG_NAMES, end_
 ROOT = Path(__file__).resolve().parent.parent
 ENGINE = ROOT / "engine" / "index.html"
 STATE = ROOT / "state.json"
-FPS = 30
+FPS = 60  # 60 images/s : mouvement bien plus fluide
 CHROME = os.environ.get("CHROME_PATH", "/usr/bin/google-chrome")
 HANDLE = os.environ.get("HANDLE", "")
 # ffmpeg tout prêt fourni par le paquet imageio-ffmpeg (pas d'installation système)
@@ -146,6 +146,7 @@ def platform_version(page, src, handle, dst, plat):
 
 TEASERS = ["WAIT FOR IT", "WATCH THE END", "IT ENDS LIKE THIS", "DON'T SCROLL"]
 TEASER_LEN = 0.9
+BURST_MODES = ("stamps", "twin", "blender", "hunters", "spinners", "chompers")
 
 
 def add_teaser(page, mp4, at):
@@ -294,6 +295,9 @@ def main():
         mp4 = out / f"subliminal_{stamp}_{mode}_{ep}.mp4"
         # moment montré en accroche : juste avant la fin (le plus spectaculaire), pris dans la durée connue
         teaser_at = round(max(3.0, float(info.get("dur", 20)) * 0.8), 2)
+        if mode in BURST_MODES:
+            # le teaser montre l'explosion finale
+            teaser_at = round(float(info["dur"]) - 3.55, 2)
         opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
         if teaser_at + TEASER_LEN < dur - 1:

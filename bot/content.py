@@ -122,6 +122,48 @@ MODES = {
         "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#asmr"],
         "hue": False, "min": 25, "max": 60,
     },
+    "stamps": {
+        "series": "Stamps", "keyword": "Satisfying 4 hydraulic presses multiply rainbow balls until the box bursts",
+        "hooks": ["This box holds 250 balls. It starts with 4", "4 presses. 1 rhythm. The box won't survive", "Every stamp doubles them. Wait for the end"],
+        "question": "At what number did you think it would burst?",
+        "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 28, "max": 60,
+    },
+    "twin": {
+        "series": "Twin Press", "keyword": "Two walls crush balls into 3 until the box explodes, satisfying simulation",
+        "hooks": ["3 balls vs 2 walls. The box won't survive", "Every ball caught becomes 3. Don't scroll", "Guess the count when it explodes"],
+        "question": "What count did you guess before it exploded?",
+        "tags": ["#satisfying", "#hydraulicpress", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 25, "max": 55,
+    },
+    "blender": {
+        "series": "Blender", "keyword": "2 balls in a blender, every hit splits them in 2 until it bursts",
+        "hooks": ["2 balls in a blender. Every hit makes 2", "Don't blink. This blender is about to burst", "Every ball the blade touches splits in 2"],
+        "question": "Would you have stopped the blender before it burst?",
+        "tags": ["#satisfying", "#blender", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 28, "max": 55,
+    },
+    "hunters": {
+        "series": "Hunters", "keyword": "Gears roam free and multiply every ball they pin until it bursts",
+        "hooks": ["3 gears roam free. Every ball they pin becomes 2", "The gears are hunting. Nothing escapes", "Guess the count when it explodes"],
+        "question": "What number did you guess before it exploded?",
+        "tags": ["#satisfying", "#gears", "#oddlysatisfying", "#asmr"],
+        "hue": False, "min": 28, "max": 60,
+    },
+    "spinners": {
+        "series": "Spinners", "keyword": "Spinning bars drift and split every pinned ball in 2 until it bursts",
+        "hooks": ["2 spinning bars. Every ball they pin splits in 2", "They drift. They spin. They multiply", "Don't scroll. This circle is about to burst"],
+        "question": "Which bar do you think did the most damage?",
+        "tags": ["#satisfying", "#physics", "#oddlysatisfying", "#hypnotic"],
+        "hue": False, "min": 28, "max": 60,
+    },
+    "chompers": {
+        "series": "Chompers", "keyword": "Chompers eat 1 ball and spit out 2 until the circle bursts",
+        "hooks": ["They eat 1 ball and spit out 2", "2 chompers. 8 balls. This ends badly", "Feed them long enough and this happens"],
+        "question": "How many balls did you think they could eat?",
+        "tags": ["#satisfying", "#oddlysatisfying", "#asmr", "#hypnotic"],
+        "hue": False, "min": 24, "max": 55,
+    },
     "oval": {
         "series": "Oval", "keyword": "Satisfying bouncing balls multiply through the hole in the oval",
         "hooks": ["Every ball through the hole becomes 2", "1 ball. 1 hole. Can the oval hold them?", "Guess how many before the oval breaks"],
@@ -182,11 +224,13 @@ def interesting(mode, info):
     if mode in ("oval", "portal"):
         # Ovale qui casse vite : la vidéo reste nerveuse
         return 10 - d / 10 if info["state"] == "break" and info["n"] >= 1000 else None
-    if mode in ("press", "grinder"):
-        return 8 if info["state"] == "full" and info["n"] >= 600 else None
+    if mode in ("press", "stamps", "twin", "blender", "hunters", "spinners", "chompers"):
+        return 8 if info["state"] == "full" and info["n"] >= 180 else None
+    if mode == "grinder":
+        return 8 if info["state"] == "full" and info["n"] >= 450 else None
     if mode == "crusher":
         # Pas d'égalité : la couleur gagnante affichée doit être indiscutable
-        if info["state"] != "full" or info["n"] < 600 or info["gap"] < 2:
+        if info["state"] != "full" or info["n"] < 250 or info["gap"] < 2:
             return None
         return 8 + (1 if info["gap"] <= 40 else 0)
     if mode == "bricks":
