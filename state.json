@@ -23,7 +23,8 @@
     "glass",
     "pendulum",
     "grinder",
-    "spinners"
+    "spinners",
+    "chompers"
   ],
   "episodes": {
     "multiply": 2,
@@ -40,7 +41,8 @@
     "press": 2,
     "portal": 1,
     "grinder": 1,
-    "spinners": 1
+    "spinners": 1,
+    "chompers": 1
   },
   "words": [],
   "battle_day": "2026-11-18"

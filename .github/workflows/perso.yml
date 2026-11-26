@@ -5,17 +5,22 @@ on:
   workflow_dispatch:
     inputs:
       fichier:
-        description: "Nom du fichier dans a_publier/ (ex. ma_video.mp4)"
+        description: "Fichier ou dossier dans a_publier/ (ex. ma_video.mp4, ou chompers_1 pour une vidéo du bot)"
         required: true
+      envoi:
+        description: "brouillon = à valider dans Buffer · publier = en ligne tout de suite · programmer = à l'heure ci-dessous"
+        type: choice
+        default: brouillon
+        options: [brouillon, publier, programmer]
       quand:
-        description: "Date et heure de Paris, format AAAA-MM-JJ HH:MM (vide = brouillon Buffer)"
+        description: "Pour « programmer » : date et heure de Paris, AAAA-MM-JJ HH:MM"
         default: ""
       titre:
-        description: "Titre (YouTube / TikTok)"
-        required: true
+        description: "Titre (YouTube / TikTok) — inutile pour un dossier généré par le bot"
+        default: ""
       legende:
-        description: "Légende (\\n pour un retour à la ligne)"
-        required: true
+        description: "Légende (\\n pour un retour à la ligne) — inutile pour un dossier généré par le bot"
+        default: ""
 
 permissions:
   contents: write
@@ -34,46 +39,50 @@ jobs:
       - name: Préparer la publication
         env:
           FICHIER: ${{ inputs.fichier }}
+          ENVOI: ${{ inputs.envoi }}
           QUAND: ${{ inputs.quand }}
           TITRE: ${{ inputs.titre }}
           LEGENDE: ${{ inputs.legende }}
         run: |
-          test -f "a_publier/$FICHIER" || { echo "Fichier a_publier/$FICHIER introuvable"; exit 1; }
-          mkdir -p out && cp "a_publier/$FICHIER" "out/perso_$FICHIER"
+          mkdir -p out
+          if [ -d "a_publier/$FICHIER" ]; then cp a_publier/$FICHIER/* out/; else
+            test -f "a_publier/$FICHIER" || { echo "a_publier/$FICHIER introuvable"; exit 1; }
+            cp "a_publier/$FICHIER" "out/perso_$FICHIER"
+            python -c "import json,os;json.dump({'file':'perso_'+os.environ['FICHIER'],'title':os.environ['TITRE'],'caption':os.environ['LEGENDE'].replace(chr(92)+'n',chr(10))},open('out/post.json','w'),ensure_ascii=False)"
+          fi
           python - <<'PY'
-          import json, os, datetime as dt
+          import os, datetime as dt
           from zoneinfo import ZoneInfo
-          f = "perso_" + os.environ["FICHIER"]
-          cap = os.environ["LEGENDE"].replace("\\n", "\n")
-          json.dump({"file": f, "title": os.environ["TITRE"], "caption": cap}, open("out/post.json", "w"), ensure_ascii=False)
-          q = os.environ["QUAND"].strip()
+          envoi, q = os.environ["ENVOI"], os.environ["QUAND"].strip()
           with open(os.environ["GITHUB_ENV"], "a") as e:
-              if q:
+              if envoi == "programmer":
                   t = dt.datetime.strptime(q, "%Y-%m-%d %H:%M").replace(tzinfo=ZoneInfo("Europe/Paris"))
                   if t <= dt.datetime.now(dt.timezone.utc):
                       raise SystemExit("L'heure demandée est déjà passée")
-                  e.write("DUE_AT=" + t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z") + "\n")
-                  e.write("DRAFT=0\n")
+                  e.write("DUE_AT=" + t.astimezone(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z") + "\nDRAFT=0\n")
               else:
-                  e.write("DRAFT=1\n")
+                  e.write("DRAFT=" + ("1" if envoi == "brouillon" else "0") + "\n")
           PY
 
       - name: Héberger la vidéo (branche media)
         run: |
-          FILE=$(python -c "import json;print(json.load(open('out/post.json'))['file'])")
+          FILES=$(python -c "import json;p=json.load(open('out/post.json'));print(' '.join(sorted(set(p.get('files',{}).values())|{p['file']})))")
           git config --global user.name "subliminal-bot"
           git config --global user.email "subliminal-bot@users.noreply.github.com"
           REMOTE="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
           mkdir -p /tmp/media && cd /tmp/media
           if git clone -q --depth 1 --branch media "$REMOTE" repo 2>/dev/null; then cd repo; else mkdir repo && cd repo && git init -q && git remote add origin "$REMOTE"; fi
-          cp "$GITHUB_WORKSPACE/out/$FILE" .
+          for f in $FILES; do test -f "$GITHUB_WORKSPACE/out/$f" && cp "$GITHUB_WORKSPACE/out/$f" .; done
           ls -1t *.mp4 | tail -n +17 | xargs -r rm -f
           git checkout -q --orphan fresh
-          git add -A && git commit -q -m "media $FILE"
+          git add -A && git commit -q -m "media perso"
           git push -q -f origin fresh:media
-          URL="https://raw.githubusercontent.com/${{ github.repository }}/media/$FILE"
-          for i in $(seq 1 30); do curl -sfI "$URL" > /dev/null && break; sleep 10; done
-          echo "VIDEO_URL=$URL" >> "$GITHUB_ENV"
+          BASE="https://raw.githubusercontent.com/${{ github.repository }}/media/"
+          for f in $FILES; do test -f "$GITHUB_WORKSPACE/out/$f" || continue; for i in $(seq 1 30); do curl -sfI "$BASE$f" > /dev/null && break; sleep 10; done; done
+          MAIN=$(python -c "import json;p=json.load(open('$GITHUB_WORKSPACE/out/post.json'));f=p['files'] if p.get('files') else {};import os;print(f.get('tiktok') if not os.path.exists('$GITHUB_WORKSPACE/out/'+p['file']) else p['file'])")
+          echo "VIDEO_URL=$BASE$MAIN" >> "$GITHUB_ENV"
+          URLS=$(python -c "import json,sys;p=json.load(open(sys.argv[2]));print(json.dumps({k:sys.argv[1]+v for k,v in p.get('files',{}).items()}))" "$BASE" "$GITHUB_WORKSPACE/out/post.json")
+          echo "VIDEO_URLS=$URLS" >> "$GITHUB_ENV"
 
       - name: Envoyer à Buffer
         env:
