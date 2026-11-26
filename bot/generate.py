@@ -125,7 +125,7 @@ def platform_version(page, src, handle, dst, plat):
     m.paste(255, (70, 70, sw - 70, sh - 70))
     m.filter(ImageFilter.GaussianBlur(28)).save(mask)
     inputs = [FFMPEG, "-loglevel", "error", "-y", "-i", str(src), "-loop", "1", "-i", str(mask),
-              "-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30"]
+              "-f", "lavfi", "-i", f"color=c=black:s=1080x1920:r={FPS}"]
     filt = (f"[0]scale={sw}:{sh},format=rgba[c];[1]format=gray[m];[c][m]alphamerge[v];"
             f"[2][v]overlay={ox}:{oy}:shortest=1[b]")
     png = None
@@ -154,11 +154,12 @@ def add_teaser(page, mp4, at):
     png = mp4.with_name(mp4.stem + "_teaser.png")
     png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.teaserPng(t)", random.choice(TEASERS)).split(",")[1]))
     out = mp4.with_name(mp4.stem + "_hook.mp4")
-    a, b = at, at + TEASER_LEN
-    filt = (f"[0:v]trim={a:.3f}:{b:.3f},setpts=PTS-STARTPTS,eq=brightness=0.04:contrast=1.08[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
-            f"[0:a]atrim={a:.3f}:{b:.3f},asetpts=PTS-STARTPTS,afade=t=out:st={TEASER_LEN-0.15:.2f}:d=0.15[ta];"
+    # l'extrait est lu à part (2e entrée) : pas besoin de garder toute la vidéo en mémoire
+    filt = (f"[2:v]setpts=PTS-STARTPTS,eq=brightness=0.04:contrast=1.08[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
+            f"[2:a]asetpts=PTS-STARTPTS,afade=t=out:st={TEASER_LEN-0.15:.2f}:d=0.15[ta];"
             f"[tvo][ta][0:v][0:a]concat=n=2:v=1:a=1[v][au]")
-    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-loop", "1", "-i", str(png), "-filter_complex", filt,
+    subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-loop", "1", "-i", str(png),
+                    "-ss", f"{at:.3f}", "-t", f"{TEASER_LEN:.3f}", "-i", str(mp4), "-filter_complex", filt,
                     "-map", "[v]", "-map", "[au]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out)], check=True)
     png.unlink()
@@ -297,7 +298,7 @@ def main():
         teaser_at = round(max(3.0, float(info.get("dur", 20)) * 0.8), 2)
         if mode in BURST_MODES:
             # le teaser montre l'explosion finale
-            teaser_at = round(float(info["dur"]) - 3.55, 2)
+            teaser_at = round(float(info["dur"]) - 4.15, 2)
         opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
         if teaser_at + TEASER_LEN < dur - 1:

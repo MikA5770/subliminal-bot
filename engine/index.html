@@ -748,7 +748,7 @@ sims.split={name:'13 · Snapping bar',hook:'Every bar that hits the floor snaps 
       if(this.state==='play'&&((this.fill>=1&&!this.bars.length)||this.t>75)){this.state='packed';this.packT=0;this.beat=0;snd('s',.4,0);}
       if(this.state==='packed'){this.packT+=dt;if(this.packT>=4.6)this.boom();else{this.beat-=dt;if(this.beat<=0){snd('n',.5+.5*this.packT/4.6,0);this.beat=Math.max(.09,.6-this.packT*.12);}}}}
     else for(const d of this.deb){d.vy+=1300*dt;d.x+=d.vx*dt;d.y+=d.vy*dt;d.a+=d.va*dt;}},
-  draw(){const sh=this.shake*18;ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
+  draw(){const sh=this.shake*18;ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);
     if(this.state!=='boom'){const p=this.state==='packed'?this.packT/4.6:0;
       ctx.strokeStyle=p?`rgba(${228+27*p},${220-120*p},${255-60*p},.95)`:'rgba(228,220,255,.6)';ctx.lineWidth=2+p*4;if(p){ctx.shadowColor='#f0abfc';ctx.shadowBlur=10+30*p;}
       ctx.strokeRect(this.X0,this.TOP,this.X1-this.X0,this.FL-this.TOP);ctx.shadowBlur=0;
@@ -1105,7 +1105,7 @@ sims.stamps={name:'21 · Stamps',hook:'4 presses, one rhythm. Every ball they st
       this.fill=boxFill(this.w,this.BW*(this.BH-80));
       if(this.fill>=1||this.w.n>=this.w.cap-20||this.t>58){this.state='full';this.end=5.6;snd('k',1,0);}}
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
-  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const{X0,X1,TOP,FL,HW}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:0);this.w.draw(NEON);
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);const{X0,X1,TOP,FL,HW}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:0);this.w.draw(NEON);
     for(const h of this.heads)drawHead(h.x,TOP,h.hy,HW,h.fl);
     big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
     ctx.restore();endText(this,'NO ROOM LEFT');},
@@ -1134,7 +1134,7 @@ sims.twin={name:'22 · Twin press',hook:'Two walls slam together. Every ball cau
     if(this.state==='play'){this.fill=boxFill(this.w,this.BW*(this.BH-60));
       if(this.fill>=1||this.w.n>=this.w.cap-20||this.t>58){this.state='full';this.end=5.6;snd('k',1,0);}}
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
-  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const{X0,X1,TOP,FL,JH,jl,jr}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:this.fl*.6);this.w.draw(NEON);
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);const{X0,X1,TOP,FL,JH,jl,jr}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:this.fl*.6);this.w.draw(NEON);
     if(!this.boomed)for(const[a,b]of[[X0,jl],[jr,X1]]){ctx.fillStyle='rgba(36,22,63,.92)';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;
       ctx.shadowColor='#c77dff';ctx.shadowBlur=18+this.fl*40;ctx.fillRect(a,FL-JH,b-a,JH);ctx.strokeRect(a,FL-JH,b-a,JH);ctx.shadowBlur=0;
       ctx.strokeStyle='rgba(235,228,255,.18)';ctx.lineWidth=2;ctx.beginPath();for(let y=FL-JH+40;y<FL;y+=40){ctx.moveTo(a+6,y);ctx.lineTo(b-6,y);}ctx.stroke();}
@@ -1163,7 +1163,7 @@ sims.blender={name:'23 · Blender',hook:'Every ball the blade hits splits in 2. 
       if(this.fill>=1||this.w.n>=this.w.cap-10||this.t>55){this.state='full';this.end=5.6;snd('k',1,0);}}
     else this.om*=Math.pow(.25,dt);
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
-  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));const R=this.R,th=this.th;if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+this.fl*20+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);const R=this.R,th=this.th;if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+this.fl*20+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
     // traînée de la lame
     for(const a0 of[th,th+Math.PI]){const g=ctx.createRadialGradient(CX,CY,this.HUB,CX,CY,this.L);g.addColorStop(0,'rgba(199,125,255,0)');g.addColorStop(1,'rgba(199,125,255,.22)');
       ctx.fillStyle=g;ctx.beginPath();ctx.moveTo(CX,CY);ctx.arc(CX,CY,this.L,a0-.55,a0);ctx.closePath();ctx.fill();}
@@ -1204,7 +1204,7 @@ function mobileSim(o){return{name:o.name,hook:o.hook,inst:o.inst||'marimba',mel:
       this.fill=w.n*Math.PI*w.r*w.r/(Math.PI*this.R*this.R-ba)/.62;
       if(this.fill>=1||w.n>=w.cap-10||this.t>55){this.state='full';this.end=5.6;snd('k',1,0);}}
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
-  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate(rnd(-sh,sh),rnd(-sh,sh));
+  draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);
     if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,this.R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
     this.w.draw(NEON);for(const b of this.bodies)o.drawBody(this,b);ctx.restore();
     big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);endText(this,o.full||'NO ROOM LEFT');},
@@ -1426,7 +1426,7 @@ window.__exp={
   start(mode,s,o={}){exporting=true;finished=false;loopImg=null;teaserAt=o.teaserAt||0;teaserDone=false;events=[];seedV=s;rand=mulberry;if(o.secret)secretIn.value=o.secret;if(o.ep!==undefined)epIn.value=o.ep;if(o.handle!==undefined)handleIn.value=o.handle;ctaText=o.cta||'';creditText=o.credit||'';battleCfg=o.battle||null;load(mode,o);events.push({k:'k',v:1,t:0,i:instName},{k:'b',v:.8,t:.14,i:instName});},
   teaserPng(t){const c=mk(),g=c.getContext('2d');const y=H/2-40;g.fillStyle='rgba(6,3,14,.55)';g.fillRect(0,y-90,W,180);g.font=`500 92px ${FONT}`;g.letterSpacing='18px';g.textAlign='center';g.textBaseline='middle';g.shadowColor='#8b5cf6';g.shadowBlur=30;g.fillStyle='#ffffff';g.fillText(t,W/2+9,y,1000);return c.toDataURL('image/png');},
   handlePng(t){const c=mk(),g=c.getContext('2d');g.font=`300 72px ${FONT}`;g.letterSpacing='14px';g.textAlign='center';g.textBaseline='middle';g.fillStyle='rgba(236,230,255,.09)';g.fillText(t,W/2,CY,1000);return c.toDataURL('image/png');},
-  frame(fps){const dt=1/fps;for(let i=0;i<8;i++)tick(dt/8);updParts(dt);render();
+  frame(fps){const dt=1/fps,k=Math.max(1,Math.round(dt*240));for(let i=0;i<k;i++)tick(dt/k);updParts(dt);render();
     if(!loopImg||(teaserAt&&!teaserDone&&simT>=teaserAt)){if(loopImg&&teaserAt)teaserDone=true;loopImg=document.createElement('canvas');loopImg.width=W;loopImg.height=H;loopImg.getContext('2d').drawImage(cv,0,0);}
     return{img:cv.toDataURL('image/jpeg',.9),done:finished,t:simT};},
   stats(mode,s,maxT,o={}){this.start(mode,s,o);while(!finished&&simT<maxT){tick(1/240);}const r=cur.info();r.dur=+simT.toFixed(1);r.notes=events.length;return r;},
