@@ -153,17 +153,21 @@ TEASER_LEN = 0.9
 BURST_MODES = ("stamps", "twin", "blender", "hunters", "spinners", "chompers")
 
 
-def add_teaser(page, mp4, at, texts=None):
-    """Accroche : une seconde du moment le plus fort, avec un texte, puis coupe franche vers le début."""
+def add_teaser(page, mp4, at, texts=None, dur=None):
+    """Accroche : une seconde du moment le plus fort, avec un texte, puis coupe franche vers le début.
+    La fin se fond dans cette même image (texte compris) : la dernière image = la première, boucle parfaite."""
     png = mp4.with_name(mp4.stem + "_teaser.png")
     png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.teaserPng(t)", random.choice(texts or TEASERS)).split(",")[1]))
     out = mp4.with_name(mp4.stem + "_hook.mp4")
+    lp = 0.8  # durée du fondu final (même valeur que dans le moteur)
     # l'extrait est lu à part (2e entrée) : pas besoin de garder toute la vidéo en mémoire
-    filt = (f"[2:v]setpts=PTS-STARTPTS,eq=brightness=0.04:contrast=1.08[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
+    filt = (f"[2:v]setpts=PTS-STARTPTS[tv];[tv][1]overlay=0:0:shortest=1[tvo];"
             f"[2:a]asetpts=PTS-STARTPTS,afade=t=out:st={TEASER_LEN-0.15:.2f}:d=0.15[ta];"
-            f"[tvo][ta][0:v][0:a]concat=n=2:v=1:a=1[v][au]")
+            f"[3]format=rgba,fade=t=in:st={max(0, dur - lp):.3f}:d={lp}:alpha=1[tx];[0:v][tx]overlay=0:0:shortest=1[mv];"
+            f"[tvo][ta][mv][0:a]concat=n=2:v=1:a=1[v][au]")
     subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-loop", "1", "-i", str(png),
-                    "-ss", f"{at:.3f}", "-t", f"{TEASER_LEN:.3f}", "-i", str(mp4), "-filter_complex", filt,
+                    "-ss", f"{at:.3f}", "-t", f"{TEASER_LEN:.3f}", "-i", str(mp4),
+                    "-loop", "1", "-framerate", str(FPS), "-t", f"{dur + 0.5:.3f}", "-i", str(png), "-filter_complex", filt,
                     "-map", "[v]", "-map", "[au]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "19", "-pix_fmt", "yuv420p",
                     "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(out)], check=True)
     png.unlink()
@@ -307,7 +311,7 @@ def main():
         opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
         if teaser_at + TEASER_LEN < dur - 1:
-            add_teaser(page, mp4, teaser_at, BURST_TEASERS if mode in BURST_MODES else None)
+            add_teaser(page, mp4, teaser_at, BURST_TEASERS if mode in BURST_MODES else None, dur)
             dur += TEASER_LEN
         files = {}
         for plat, h in HANDLES.items():

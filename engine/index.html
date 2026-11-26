@@ -1085,7 +1085,7 @@ function shakeOf(sim){return sim.state!=='full'?0:sim.boomed?Math.max(0,26-(sim.
 function drawBoom(sim){if(!sim.boomed)return;const k=sim.pT-sim.boomAt;
   if(k<.25){ctx.fillStyle=`rgba(255,255,255,${.85*(1-k/.25)})`;ctx.fillRect(-W,-H,3*W,3*H);}
   for(const[dl,c]of[[0,'rgba(255,255,255,'],[.08,'rgba(199,125,255,']]){const t=k-dl;if(t<0||t>.9)continue;ctx.beginPath();ctx.arc(CX,CY,460+t*1400,0,TAU);ctx.lineWidth=40*(1-t/.9);ctx.strokeStyle=c+(1-t/.9)+')';ctx.shadowColor='#c77dff';ctx.shadowBlur=40;ctx.stroke();ctx.shadowBlur=0;}}
-function endText(sim,txt){if(sim.state!=='full')return;drawBoom(sim);if(sim.boomed)big('IT BURST',CY-600,96,'#ffffff');else popBig(txt,CY-600,74,'#ffffff');}
+function endText(sim,txt){if(sim.state!=='full')return;drawBoom(sim);if(sim.boomed)big('IT BURST',CY-600,96,'#ffffff');}
 function boxFill(w,area){return w.n*Math.PI*w.r*w.r/area/.84;}
 function drawBox(x0,y0,x1,y1,glow=0){ctx.strokeStyle='rgba(235,228,255,.85)';ctx.lineWidth=4;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=16+glow*30;ctx.strokeRect(x0,y0,x1-x0,y1-y0);ctx.shadowBlur=0;}
 function fillBar(p){p=clamp(p||0,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.fillRect(CX-300,1730,600*p,6);}
