@@ -1020,7 +1020,7 @@ sims.press={name:'17 · Press',hook:'Every ball it crushes explodes into 3. Watc
     ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18;ctx.fillStyle='#24163f';ctx.fillRect(hx-HW/2,hy-20,HW,60);ctx.strokeRect(hx-HW/2,hy-20,HW,60);ctx.shadowBlur=0;
     ctx.fillStyle='rgba(235,228,255,.5)';for(let k=0;k<6;k++)ctx.fillRect(hx-HW/2+20+k*(HW-40)/5-3,hy+10,6,6);
     big(`${fmtN(this.w.n)} BALLS`,1640,96);
-    const p=clamp(this.fill||0,0,1);ctx.fillStyle='rgba(228,220,255,.18)';ctx.fillRect(CX-300,1730,600,6);ctx.fillStyle='#e4dcff';ctx.fillRect(CX-300,1730,600*p,6);
+    
     if(this.state==='full')big('NO ROOM TO PRESS',CY-600,70,'#ffffff');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,presses:this.presses,dur:+this.t.toFixed(1)};}
 };
@@ -1087,7 +1087,7 @@ function drawHead(x,top,hy,hw,fl){ctx.fillStyle='#1a1030';ctx.strokeStyle='rgba(
 sims.stamps={name:'21 · Stamps',hook:'4 presses, one rhythm. Every ball they stamp turns into 2',inst:'marimba',mel:'run',
   init(){const BW=840,BH=880,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+30,FL=TOP+BH,K=4,GAPH=26,HW=(BW-GAPH*(K+1))/K;
     const heads=[];for(let k=0;k<K;k++)heads.push({x:X0+GAPH+HW/2+k*(HW+GAPH),hy:TOP+10,ph:'wait',fl:0});
-    Object.assign(this,{boomed:false,pT:0,hbT:0,BW,BH,X0,X1,TOP,FL,K,HW,heads,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,stampsN:0,seq:0,next:.7,
+    Object.assign(this,{boomed:false,pT:0,hbT:0,sq:0,BW,BH,X0,X1,TOP,FL,K,HW,heads,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,stampsN:0,seq:0,next:.7,
       order:rand()<.5?[0,1,2,3,2,1]:[0,2,1,3,1,2]});
     for(let k=0;k<K;k++)this.w.add(heads[k].x+rnd(-30,30),FL-80-rnd(0,260),k*2,rnd(-2,2),0);},
   phys(dt){const w=this.w,{X0,X1,TOP,FL,HW}=this,r=w.r;
@@ -1104,14 +1104,14 @@ sims.stamps={name:'21 · Stamps',hook:'4 presses, one rhythm. Every ball they st
     for(const h of this.heads){h.fl=Math.max(0,h.fl-dt*3);
       if(h.ph==='down'){h.hy+=dt*1700;if(h.hy+40>=FL-3){h.hy=FL-43;h.ph='up';snd('b',1,0);}}
       else if(h.ph==='up'){h.hy-=dt*1000;if(h.hy<=TOP+10){h.hy=TOP+10;h.ph='wait';}}}
+    if(!this.boomed){this.next-=dt;if(this.next<=0){const h=this.heads[this.order[this.seq%this.order.length]];if(h.ph==='wait'){h.ph='down';this.stampsN++;}this.seq++;this.next=Math.max(this.state==='full'?.18:.28,.75-this.t*.012);}}
     if(this.state==='play'){
-      this.next-=dt;if(this.next<=0){const h=this.heads[this.order[this.seq%this.order.length]];if(h.ph==='wait'){h.ph='down';this.stampsN++;}this.seq++;this.next=Math.max(.28,.75-this.t*.012);}
       this.fill=boxFill(this.w,this.BW*(this.BH-80));
       if(this.fill>=1||this.w.n>=this.w.cap-20||this.t>75){this.state='full';this.end=6.4;snd('b',1,0);}}
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
   draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);const{X0,X1,TOP,FL,HW}=this;if(!this.boomed)drawBox(X0,TOP-40,X1,FL,this.state==='full'?this.pT/1.8:0);this.w.draw(NEON);
     for(const h of this.heads)drawHead(h.x,TOP,h.hy,HW,h.fl);
-    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);
     ctx.restore();endText(this,'NO ROOM LEFT');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,fill:+(this.fill||0).toFixed(2),dur:+this.t.toFixed(1)};}
 };
@@ -1119,7 +1119,7 @@ sims.stamps={name:'21 · Stamps',hook:'4 presses, one rhythm. Every ball they st
 /* ---------- Format : deux murs qui se referment (chaque bille prise devient 3) ---------- */
 sims.twin={name:'22 · Twin press',hook:'Two walls slam together. Every ball caught in between becomes 3',inst:'kalimba',mel:'run',
   init(){const BW=820,BH=900,X0=CX-BW/2,X1=CX+BW/2,TOP=CY-BH/2+30,FL=TOP+BH,JH=280;
-    Object.assign(this,{boomed:false,pT:0,hbT:0,BW,BH,X0,X1,TOP,FL,JH,jl:X0+14,jr:X1-14,ph:'wait',wt:1.2,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,slams:0,fl:0});
+    Object.assign(this,{boomed:false,pT:0,hbT:0,sq:0,BW,BH,X0,X1,TOP,FL,JH,jl:X0+14,jr:X1-14,ph:'wait',wt:1.2,w:new BallWorld(700,26),t:0,acc:0,state:'play',crushed:0,slams:0,fl:0});
     for(let i=0;i<3;i++)this.w.add(CX+(i-1)*60,FL-90,i*3%8,rnd(-2,2),0);},
   phys(dt){const w=this.w,{X0,X1,TOP,FL,JH}=this,r=w.r;
     w.step(dt,0,1600,[X0,TOP-200,X1,FL],W2=>{const X=W2.X,Y=W2.Y;for(let i=0;i<W2.n;i++){
@@ -1131,7 +1131,7 @@ sims.twin={name:'22 · Twin press',hook:'Two walls slam together. Every ball cau
       for(let k=0;k<3;k++){const j=w.add(CX+rnd(-90,90),FL-JH-r-rnd(4,140),rnd(0,8)|0,rnd(-900,900),-rnd(700,1400));if(j>=0)w.IM[j]=.6;}}
     this.fl=1;snd('b',1,0);if(cr.length){snd('s',.4,.03);for(let k=0;k<Math.min(7,cr.length);k++)snd('n',1,.02);}},
   step(dt){this.t+=dt;overfull(this,dt);const{X0,X1}=this,r=this.w.r,shut=CX-r*.55;this.fl=Math.max(0,this.fl-dt*2.5);
-    if(this.ph==='wait'){if(this.state==='play'){this.wt-=dt;if(this.wt<=0){this.ph='close';this.slams++;}}}
+    if(this.ph==='wait'){if(!this.boomed){this.wt-=dt;if(this.wt<=0){this.ph='close';this.slams++;}}}
     else if(this.ph==='close'){const v=dt*(1300+this.slams*25);this.jl=Math.min(shut,this.jl+v);this.jr=Math.max(2*CX-shut,this.jr-v);if(this.jl>=shut){this.slam();this.ph='hold';this.wt=.12;}}
     else if(this.ph==='hold'){this.wt-=dt;if(this.wt<=0)this.ph='open';}
     else{const v=dt*800;this.jl=Math.max(X0+14,this.jl-v);this.jr=Math.min(X1-14,this.jr+v);if(this.jl<=X0+14){this.ph='wait';this.wt=Math.max(.55,1.5-this.slams*.04);}}
@@ -1142,14 +1142,14 @@ sims.twin={name:'22 · Twin press',hook:'Two walls slam together. Every ball cau
     if(!this.boomed)for(const[a,b]of[[X0,jl],[jr,X1]]){ctx.fillStyle='rgba(36,22,63,.92)';ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;
       ctx.shadowColor='#c77dff';ctx.shadowBlur=18+this.fl*40;ctx.fillRect(a,FL-JH,b-a,JH);ctx.strokeRect(a,FL-JH,b-a,JH);ctx.shadowBlur=0;
       ctx.strokeStyle='rgba(235,228,255,.18)';ctx.lineWidth=2;ctx.beginPath();for(let y=FL-JH+40;y<FL;y+=40){ctx.moveTo(a+6,y);ctx.lineTo(b-6,y);}ctx.stroke();}
-    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);
     ctx.restore();endText(this,'NO ROOM LEFT');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,fill:+(this.fill||0).toFixed(2),dur:+this.t.toFixed(1)};}
 };
 
 /* ---------- Format : mixeur (chaque bille touchée par la lame devient 2) ---------- */
 sims.blender={name:'23 · Blender',hook:'Every ball the blade hits splits in 2. How long until it is full?',inst:'kalimba',mel:'run',
-  init(){const R=440;Object.assign(this,{boomed:false,pT:0,hbT:0,R,w:new BallWorld(500,26),t:0,acc:0,state:'play',crushed:0,th:rnd(0,TAU),om:2.2,L:420,HUB:44,fl:0,p:.5});
+  init(){const R=440;Object.assign(this,{boomed:false,pT:0,hbT:0,sq:0,R,w:new BallWorld(500,26),t:0,acc:0,state:'play',crushed:0,th:rnd(0,TAU),om:2.2,L:420,HUB:44,fl:0,p:.5});
     for(let i=0;i<2;i++)this.w.add(CX+(i?1:-1)*rnd(120,220),CY-280,i*4,rnd(-2,2),0);},
   segs(){return[this.th,this.th+Math.PI].map(a=>[CX+Math.cos(a)*this.HUB,CY+Math.sin(a)*this.HUB,CX+Math.cos(a)*this.L,CY+Math.sin(a)*this.L]);},
   phys(dt){const w=this.w,R=this.R,r=w.r,S=this.segs(),hit=new Set(),om=this.om;
@@ -1157,15 +1157,15 @@ sims.blender={name:'23 · Blender',hook:'Every ball the blade hits splits in 2. 
       if(!this.boomed)for(const sg of S)if(W2.pushSeg(i,...sg,18)){const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy)||1,v=om*d/120*.7;PX[i]=X[i]+dy/d*v;PY[i]=Y[i]-dx/d*v;if(d>this.L*.4)hit.add(i);}
       let dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);if(d<this.HUB+r&&d>1e-4){X[i]=CX+dx/d*(this.HUB+r);Y[i]=CY+dy/d*(this.HUB+r);}
       if(d>R-r&&!this.boomed){X[i]=CX+dx/d*(R-r);Y[i]=CY+dy/d*(R-r);}}},.997,16);
-    if(this.state!=='play')return;let sounds=0;
-    for(const i of[...hit].sort((a,b)=>b-a)){if(w.IM[i]>0||rand()>this.p)continue;const x=w.X[i],y=w.Y[i],dx=x-CX,dy=y-CY,d=Math.hypot(dx,dy)||1,tx=-dy/d,ty=dx/d;
+    if(this.boomed)return;let sounds=0;
+    this.sq=(this.sq||0)-dt;for(const i of[...hit].sort((a,b)=>b-a)){if(w.IM[i]>0||rand()>this.p)continue;if(this.state==='full'){if(this.sq>0)break;this.sq=1/28;}const x=w.X[i],y=w.Y[i],dx=x-CX,dy=y-CY,d=Math.hypot(dx,dy)||1,tx=-dy/d,ty=dx/d;
       w.remove(i);this.crushed++;burst(x,y,-1,6,450);if(sounds++<6)snd('n',1,.03);
       for(const s of[-1,1]){const j=w.add(x+tx*s*r*1.05,y+ty*s*r*1.05,rnd(0,8)|0,tx*rnd(300,700)+dx/d*rnd(200,500)+s*tx*150,ty*rnd(300,700)+dy/d*rnd(200,500)+s*ty*150);if(j>=0)w.IM[j]=1.1;}}
     if(sounds){this.fl=1;}},
   step(dt){this.t+=dt;overfull(this,dt);this.fl=Math.max(0,this.fl-dt*3);this.om=Math.min(5.5,2.4+this.t*.07);this.p=Math.max(.12,.55-this.w.n*.0018);this.th+=this.om*dt;
     if(this.state==='play'){this.fill=this.w.n*Math.PI*this.w.r*this.w.r/(Math.PI*this.R*this.R)/.82;
       if(this.fill>=1||this.w.n>=this.w.cap-10||this.t>75){this.state='full';this.end=6.4;snd('b',1,0);}}
-    else this.om*=Math.pow(.25,dt);
+    else if(this.boomed)this.om*=Math.pow(.25,dt);
     this.acc+=dt;while(this.acc>=1/120){this.acc-=1/120;this.phys(1/120);}},
   draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);const R=this.R,th=this.th;if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+this.fl*20+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
     // traînée de la lame
@@ -1174,14 +1174,14 @@ sims.blender={name:'23 · Blender',hook:'Every ball the blade hits splits in 2. 
     this.w.draw(NEON);
     ctx.lineCap='round';for(const sg of this.segs()){ctx.beginPath();ctx.moveTo(sg[0],sg[1]);ctx.lineTo(sg[2],sg[3]);ctx.strokeStyle='#24163f';ctx.lineWidth=30;ctx.stroke();ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=4;ctx.shadowColor='#c77dff';ctx.shadowBlur=20+this.fl*30;ctx.stroke();ctx.shadowBlur=0;}
     drawGear(CX,CY,this.HUB+6,th,10);
-    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);
     ctx.restore();endText(this,'IT’S FULL');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,fill:+(this.fill||0).toFixed(2),dur:+this.t.toFixed(1)};}
 };
 
 /* ---------- Crushers mobiles : ils se promènent comme les billes ; toute bille coincée se multiplie ---------- */
 function mobileSim(o){return{name:o.name,hook:o.hook,inst:o.inst||'marimba',mel:'run',
-  init(){const R=470;Object.assign(this,{R,w:new BallWorld(900,o.r||24),t:0,acc:0,state:'play',crushed:0,boomed:false,pT:0,hbT:0,fill:0,bodies:o.bodies()});
+  init(){const R=470;Object.assign(this,{R,w:new BallWorld(900,o.r||24),t:0,acc:0,state:'play',crushed:0,boomed:false,pT:0,hbT:0,sq:0,fill:0,bodies:o.bodies()});
     for(const b of this.bodies){const a=rnd(0,TAU),s=rnd(460,560)*(o.spd||1);b.vx=Math.cos(a)*s;b.vy=Math.sin(a)*s;b.fl=0;b.rot=b.rot||rnd(0,TAU);}
     for(let i=0;i<o.start;i++){const a=i/o.start*TAU+rnd(-.2,.2),d=rnd(330,380);this.w.add(CX+Math.cos(a)*d,CY+Math.sin(a)*d,(i*3)%8,rnd(-4,4),rnd(-4,4));}},
   phys(dt){const w=this.w,R=this.R,r=w.r,B=this.bodies,k=1+Math.min(this.t,40)*.03;
@@ -1195,8 +1195,9 @@ function mobileSim(o){return{name:o.name,hook:o.hook,inst:o.inst||'marimba',mel:
       const dx=X[i]-CX,dy=Y[i]-CY,d=Math.hypot(dx,dy);
       if(!this.boomed&&d>R-r-(o.tol||0)){if(hb)two=true;if(d>R-r)X[i]=CX+dx/d*(R-r);if(d>R-r)Y[i]=CY+dy/d*(R-r);}
       if(hb&&(two||eat))pinch.set(i,hb);}},.999,14);
-    if(this.state!=='play'||!pinch.size)return;let sn=0;
-    for(const[i,b]of[...pinch].sort((a,c)=>c[0]-a[0])){if(w.IM[i]>0)continue;const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;b.fl=1;burst(x,y,-1,6,450);if(sn++<5)snd('n',1,.03);
+    if(this.boomed||!pinch.size)return;let sn=0;
+    this.sq=(this.sq||0)-dt;
+    for(const[i,b]of[...pinch].sort((a,c)=>c[0]-a[0])){if(w.IM[i]>0)continue;if(this.state==='full'){if(this.sq>0)break;this.sq=1/28;}const x=w.X[i],y=w.Y[i];w.remove(i);this.crushed++;b.fl=1;burst(x,y,-1,6,450);if(sn++<5)snd('n',1,.03);
       const ax=x-b.x,ay=y-b.y,ad=Math.hypot(ax,ay)||1,tx=-ay/ad,ty=ax/ad,bx=o.spit?b.x-Math.cos(b.face)*(b.rad+r+2):x,by=o.spit?b.y-Math.sin(b.face)*(b.rad+r+2):y;
       for(const q of[-1,1]){const j=w.add(bx+tx*q*r*1.05,by+ty*q*r*1.05,rnd(0,8)|0,tx*q*rnd(250,500)+(o.spit?-Math.cos(b.face)*400:0),ty*q*rnd(250,500)+(o.spit?-Math.sin(b.face)*400:0));if(j>=0)w.IM[j]=.45;}}
     if(sn)snd('s',.22,.05);},
@@ -1211,7 +1212,7 @@ function mobileSim(o){return{name:o.name,hook:o.hook,inst:o.inst||'marimba',mel:
   draw(){const sh=shakeOf(this);ctx.save();if(sh)ctx.translate((Math.random()*2-1)*sh,(Math.random()*2-1)*sh);
     if(!this.boomed){ctx.beginPath();ctx.arc(CX,CY,this.R+5,0,TAU);ctx.lineWidth=4;ctx.strokeStyle='rgba(235,228,255,.9)';ctx.shadowColor='#8b5cf6';ctx.shadowBlur=18+(this.state==='full'?this.pT*20:0);ctx.stroke();ctx.shadowBlur=0;}
     this.w.draw(NEON);for(const b of this.bodies)o.drawBody(this,b);ctx.restore();
-    big(`${fmtN(this.w.n)} BALLS`,1640,96);fillBar(this.fill);endText(this,o.full||'NO ROOM LEFT');},
+    big(`${fmtN(this.w.n)} BALLS`,1640,96);endText(this,o.full||'NO ROOM LEFT');},
   info(){return{state:this.state,n:this.w.n,crushed:this.crushed,fill:+(this.fill||0).toFixed(2),dur:+this.t.toFixed(1)};}};}
 function glowStroke(fl){ctx.strokeStyle='rgba(235,228,255,.95)';ctx.lineWidth=3;ctx.shadowColor='#c77dff';ctx.shadowBlur=16+fl*36;}
 
@@ -1232,7 +1233,7 @@ sims.spinners=mobileSim({name:'25 · Spinners',hook:'2 spinning bars drift aroun
     ctx.strokeStyle='#24163f';ctx.lineWidth=30;ctx.stroke();glowStroke(b.fl);ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#0c0618';ctx.beginPath();ctx.arc(b.x,b.y,12,0,TAU);ctx.fill();ctx.stroke();}});
 
 // Gloutons : ils avalent une bille et en recrachent 2
-sims.chompers=mobileSim({name:'26 · Chompers',hook:'They eat 1 ball and spit out 2. Wait for the end',start:8,spit:true,spd:.8,full:'TOO FULL TO CHEW',
+sims.chompers=mobileSim({name:'26 · Chompers',hook:'They eat 1 ball and spit out 2. Wait for the end',start:8,spit:true,spd:.8,full:'NO ROOM. STILL EATING',
   bodies:()=>[0,1].map(k=>({x:CX+(k?170:-170),y:CY+rnd(-60,60),rad:76,face:0,mouth:.5,ph:rnd(0,TAU)})),
   tick(sim,b,dt){b.face=Math.atan2(b.vy,b.vx);b.ph+=dt*7;b.mouth=.62*Math.abs(Math.sin(b.ph));},
   collide(sim,w,i,b){const X=w.X,Y=w.Y,dx=X[i]-b.x,dy=Y[i]-b.y,d=Math.hypot(dx,dy),m=b.rad+w.r-4;if(d>=m||d<1e-4)return 0;
