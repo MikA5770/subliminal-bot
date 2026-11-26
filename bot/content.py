@@ -3,7 +3,7 @@
 Pour ajouter une accroche ou un mot secret, il suffit de compléter les listes.
 """
 
-INSTRUMENTS = ["musicbox", "marimba", "glass", "kalimba"]
+INSTRUMENTS = ["musicbox", "marimba", "glass", "kalimba", "piano"]
 MELODIES = ["run", "elise", "ode", "twinkle", "canon", "jingle", "frere", "mary", "greensleeves",
             "nachtmusik", "turkish", "lullaby", "minuet", "morning", "london", "auld"]
 SONG_NAMES = {"elise": "Für Elise", "ode": "Ode to Joy", "twinkle": "Twinkle Twinkle", "canon": "Canon in D"}

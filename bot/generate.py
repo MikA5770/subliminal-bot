@@ -47,6 +47,8 @@ def pick_mode(state, forced=None):
 def pick_options(mode, state):
     m = MODES[mode]
     opts = {"hook": random.choice(m["hooks"]), "inst": random.choice(INSTRUMENTS)}
+    if mode in BURST_MODES:
+        opts["inst"] = "piano"  # vraies notes de piano (échantillons CC0)
     if mode in ("piano", "pendulum"):
         opts["mel"] = random.choice([x for x in MELODIES if x != "run"])
     elif mode == "glass":
