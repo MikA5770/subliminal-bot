@@ -627,16 +627,16 @@ sims.pendulum={name:'11 · Pendulum weld',hook:'Every block it touches sticks',i
       const W0=blocks.map(o=>wpos(o,p));let best=null,bestScore=Infinity;
       for(const da of [0,.35,-.35,.7,-.7,1.05,-1.05,1.4,-1.4,1.8,-1.8,2.3,-2.3,2.8,-2.8,Math.PI]){
         const vx=ux*Math.cos(da)-uy*Math.sin(da),vy=ux*Math.sin(da)+uy*Math.cos(da);
-        let ext=13;for(const w of W0){const ax=(w.x-p.x2)*vx+(w.y-p.y2)*vy,pp=Math.abs(-(w.x-p.x2)*vy+(w.y-p.y2)*vx);if(pp<22)ext=Math.max(ext,ax+12);}
-        const d=ext+12,bx=p.x2+vx*d,by=p.y2+vy*d;let mind=1e9;
-        for(const w of W0)mind=Math.min(mind,Math.hypot(w.x-bx,w.y-by)-23);
-        for(let t=Math.max(0,tk-AHEAD);t<tk-.05&&mind>0;t+=.02){const r=at(t);mind=Math.min(mind,Math.hypot(r.x2-bx,r.y2-by)-28);
-          for(const o of blocks){if(o.t>t)break;const w=wpos(o,r);mind=Math.min(mind,Math.hypot(w.x-bx,w.y-by)-23);}}
-        for(const o of blocks)if(o.t>tk-AHEAD)mind=Math.min(mind,Math.hypot(o.x-bx,o.y-by)-26);
+        let ext=20;for(const w of W0){const ax=(w.x-p.x2)*vx+(w.y-p.y2)*vy,pp=Math.abs(-(w.x-p.x2)*vy+(w.y-p.y2)*vx);if(pp<36)ext=Math.max(ext,ax+19);}
+        const d=ext+19,bx=p.x2+vx*d,by=p.y2+vy*d;let mind=1e9;
+        for(const w of W0)mind=Math.min(mind,Math.hypot(w.x-bx,w.y-by)-37);
+        for(let t=Math.max(0,tk-AHEAD);t<tk-.05&&mind>0;t+=.02){const r=at(t);mind=Math.min(mind,Math.hypot(r.x2-bx,r.y2-by)-42);
+          for(const o of blocks){if(o.t>t)break;const w=wpos(o,r);mind=Math.min(mind,Math.hypot(w.x-bx,w.y-by)-37);}}
+        for(const o of blocks)if(o.t>tk-AHEAD)mind=Math.min(mind,Math.hypot(o.x-bx,o.y-by)-40);
         const score=d+Math.abs(da)*18+(mind<0?400-mind*5:0);
         if(score<bestScore){bestScore=score;best={bx,by};}}
       const dx=best.bx-p.x2,dy=best.by-p.y2;
-      blocks.push({x:best.bx,y:best.by,t:tk,rot:rnd(0,TAU),lx:dx,ly:dy,a2k:p.a2,on:false});}
+      blocks.push({x:best.bx,y:best.by,t:tk,rot:rnd(0,TAU),c:rand()*8|0,lx:dx,ly:dy,a2k:p.a2,on:false});}
     Object.assign(this,{at,blocks,times,PX,PY,T,t:0,n:0,state:'play'});
   },
   step(dt){this.t+=dt;for(const b of this.blocks)if(!b.on&&this.t>=b.t){b.on=true;this.n++;snd('n',1,0);burst(b.x,b.y,262,10,300);}
@@ -647,8 +647,8 @@ sims.pendulum={name:'11 · Pendulum weld',hook:'Every block it touches sticks',i
     glowBall(this.PX,this.PY,8,'#c4b5fd',10);glowBall(p.x1,p.y1,10,'#ffffff',16);
     for(const b of this.blocks){const vis=b.on?1:clamp((this.t-(b.t-1.4))/.45,0,1);if(vis<=0)continue;let x=b.x,y=b.y,r=b.rot;
       if(b.on){const c=Math.cos(p.a2-b.a2k),s=Math.sin(p.a2-b.a2k);x=p.x2+b.lx*c-b.ly*s;y=p.y2+b.lx*s+b.ly*c;r=b.rot+p.a2-b.a2k;}
-      ctx.save();ctx.globalAlpha=vis;ctx.translate(x,y);ctx.rotate(r);ctx.fillStyle=b.on?'rgba(228,220,255,.85)':'rgba(196,181,253,.28)';ctx.strokeStyle=b.on?'#ffffff':'rgba(228,220,255,.8)';
-      ctx.lineWidth=1.5;ctx.shadowColor='#8b5cf6';ctx.shadowBlur=b.on?14:6;ctx.fillRect(-12,-12,24,24);ctx.strokeRect(-12,-12,24,24);ctx.restore();}
+      ctx.save();ctx.globalAlpha=vis;ctx.translate(x,y);ctx.rotate(r);ctx.fillStyle=NEON[b.c];ctx.globalAlpha=vis*(b.on?1:.45);ctx.strokeStyle='#ffffff';
+      ctx.lineWidth=3;ctx.shadowColor=NEON[b.c];ctx.shadowBlur=b.on?18:8;ctx.fillRect(-19,-19,38,38);ctx.shadowBlur=0;ctx.strokeRect(-19,-19,38,38);ctx.fillStyle='rgba(255,255,255,.45)';ctx.fillRect(-15,-15,17,5);ctx.restore();}
     glowBall(p.x2,p.y2,13,'#ffffff',22);
     bigBump('n',this.n,`${this.n} WELDED`,1640,80);
     if(this.state==='done')popBig('ALL OF THEM',CY-560,80,'#ffffff');
