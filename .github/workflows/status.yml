@@ -1,0 +1,11 @@
+name: État des posts Buffer
+on:
+  workflow_dispatch:
+jobs:
+  s:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - run: python tools/buffer_status.py
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
