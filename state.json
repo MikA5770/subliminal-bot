@@ -24,13 +24,14 @@
     "pendulum",
     "grinder",
     "spinners",
-    "chompers"
+    "chompers",
+    "pendulum"
   ],
   "episodes": {
     "multiply": 2,
     "grow": 2,
     "battle": 1,
-    "pendulum": 2,
+    "pendulum": 3,
     "flags": 2,
     "crusher": 2,
     "bricks": 1,
