@@ -25,7 +25,8 @@
     "grinder",
     "spinners",
     "chompers",
-    "pendulum"
+    "pendulum",
+    "overflow"
   ],
   "episodes": {
     "multiply": 2,
@@ -43,7 +44,8 @@
     "portal": 1,
     "grinder": 1,
     "spinners": 1,
-    "chompers": 1
+    "chompers": 1,
+    "overflow": 1
   },
   "words": [],
   "battle_day": "2026-11-18"
