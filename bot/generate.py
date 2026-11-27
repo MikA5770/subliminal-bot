@@ -172,6 +172,35 @@ def platform_version(page, src, handle, dst, plat):
     mask.unlink()
 
 
+# GitHub refuse les fichiers de plus de 100 Mo sur la branche media : on vise 95 Mo pour garder une marge
+MAX_BYTES = 95 * 1024 * 1024
+
+
+def fit_size(mp4, dur):
+    """Compression minimale, seulement si la vidéo dépasse MAX_BYTES : même qualité CRF 19,
+    encodeur plus efficace (preset medium) et débit plafonné juste ce qu'il faut pour passer sous la limite.
+    Une vidéo déjà assez légère n'est pas touchée."""
+    size = mp4.stat().st_size
+    if size <= MAX_BYTES:
+        return
+    tmp = mp4.with_name(mp4.stem + "_fit.mp4")
+    audio_kbps = 192
+    budget = 0.97  # le plafond est une moyenne : petite marge en plus
+    for _ in range(4):
+        kbps = int(MAX_BYTES * 8 / 1000 / max(dur, 1) * budget) - audio_kbps
+        subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-map", "0:v", "-map", "0:a?",
+                        "-c:v", "libx264", "-preset", "medium", "-crf", "19",
+                        "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k", "-pix_fmt", "yuv420p",
+                        "-c:a", "copy", "-movflags", "+faststart", str(tmp)], check=True)
+        if tmp.stat().st_size <= MAX_BYTES:
+            print(f"Compression : {mp4.name} {size / 2**20:.1f} Mo -> {tmp.stat().st_size / 2**20:.1f} Mo (plafond {kbps} kb/s)")
+            tmp.replace(mp4)
+            return
+        budget *= 0.9
+    tmp.unlink(missing_ok=True)
+    raise RuntimeError(f"{mp4.name} reste au-dessus de {MAX_BYTES // 2**20} Mo même compressée")
+
+
 TEASERS = ["WAIT FOR IT", "WATCH THE END", "IT ENDS LIKE THIS", "DON'T SCROLL"]
 # formats qui explosent : on coupe 1 image AVANT l'explosion (boucle ouverte, la réponse est à la fin)
 BURST_TEASERS = ["WAIT FOR IT", "IT'S ABOUT TO BLOW", "DON'T BLINK", "3 SECONDS LEFT"]
@@ -356,6 +385,8 @@ def main():
             platform_version(page, mp4, h, dst, plat)
             files[plat] = dst.name
         browser.close()
+        for f in [mp4, *(out / n for n in files.values())]:
+            fit_size(f, dur)
         if errors:
             raise RuntimeError("Erreurs dans le moteur : " + "; ".join(errors))
 
