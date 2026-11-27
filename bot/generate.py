@@ -33,11 +33,20 @@ def load_state():
     return {"history": [], "episodes": {}, "words": []}
 
 
+# formats abandonnés : les moins likés sur la chaîne (likes pour 100 vues)
+DROPPED = {"multiply", "war", "glass", "trail", "flags", "piano", "maze", "reveal"}
+THEMES = ["night", "dusk", "ocean", "sunset", "mint", "rose", "sky"]
+SHAPES = json.loads((Path(__file__).parent / "shapes.json").read_text())
+
+
 def pick_mode(state, forced=None):
     if forced:
         return forced
     recent = state["history"][-3:]
-    choices = [m for m in MODES if m not in recent and m != "battle"]
+    choices = [m for m in MODES if m not in recent and m not in DROPPED and m != "battle"]
+    # format phare (le plus vu chez les meilleures chaînes) : une vidéo sur trois
+    if "fill" not in recent and random.random() < 0.33:
+        return "fill"
     # Les formats les moins publiés passent en priorité
     least = min(state["episodes"].get(m, 0) for m in choices)
     pool = [m for m in choices if state["episodes"].get(m, 0) <= least + 1]
@@ -47,6 +56,23 @@ def pick_mode(state, forced=None):
 def pick_options(mode, state):
     m = MODES[mode]
     opts = {"hook": random.choice(m["hooks"]), "inst": random.choice(INSTRUMENTS)}
+    # fond : plus de clarté la plupart du temps
+    opts["theme"] = random.choice(THEMES[1:] * 3 + ["night"])
+    if mode == "fill":
+        k = random.randrange(len(SHAPES))
+        sh = SHAPES[k]
+        opts["pick"] = k
+        opts["shape"] = sh
+        name = sh["n"].upper()
+        opts["hook"] = random.choice([f"1 bounce = 2 balls. Can they fill the {name}?", f"Wait for 100% inside the {name}",
+                                      f"1 ball vs a {name}. Watch the colors at 100%"])
+    if mode in ("flagwar", "clubwar"):
+        opts["team"] = "clubs" if mode == "clubwar" else "flags"
+        opts["kind"] = random.choice(["gap", "sumo", "hp"])
+        who = "club" if mode == "clubwar" else "country"
+        opts["hook"] = {"gap": f"Last {who} inside the circle wins. Comment yours",
+                        "sumo": f"The ring shrinks. Last {who} standing wins",
+                        "hp": f"Every hit hurts. Last {who} alive wins"}[opts["kind"]]
     if mode in BURST_MODES:
         opts["inst"] = "piano"  # vraies notes de piano (échantillons CC0)
     if mode in ("piano", "pendulum"):
@@ -150,6 +176,7 @@ TEASERS = ["WAIT FOR IT", "WATCH THE END", "IT ENDS LIKE THIS", "DON'T SCROLL"]
 # formats qui explosent : on coupe 1 image AVANT l'explosion (boucle ouverte, la réponse est à la fin)
 BURST_TEASERS = ["WAIT FOR IT", "IT'S ABOUT TO BLOW", "DON'T BLINK", "3 SECONDS LEFT"]
 TEASER_LEN = 0.9
+USE_TEASER = False  # mini hook d'ouverture désactivé pour le moment
 BURST_MODES = ("stamps", "twin", "blender", "hunters", "spinners", "chompers")
 
 
@@ -281,6 +308,14 @@ def main():
         override = {"keyword": battle.get("keyword") or f"{' vs '.join(names)} ball battle simulation",
                     "question": battle.get("question", "Who were you rooting for?"),
                     "tags": battle.get("tags", [])}
+    if mode == "fill":
+        sh = opts.pop("shape")
+        override = {"keyword": random.choice([f"Multiplying balls inside a {sh['e']} (wait for the mosaic wave!)",
+                                              f"1 Bounce = 2 Balls: how fast can they fill the {sh['e']}?",
+                                              f"1 Ball vs {sh['e']}: watch the colors transform at 100%!"])}
+    if mode in ("flagwar", "clubwar"):
+        kind = {"gap": "last one inside the circle wins", "sumo": "sumo battle, the ring shrinks", "hp": "every hit hurts"}[opts["kind"]]
+        override = {"keyword": f"{'Football clubs' if mode == 'clubwar' else 'Country flags'} battle, {kind}"}
     idea = None if mode == "battle" else take_idea(mode)
     if idea:
         by = str(idea["by"]).strip()
@@ -296,6 +331,7 @@ def main():
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.goto(ENGINE.as_uri())
+        page.evaluate("()=>window.__assetsReady")
         page.evaluate("document.fonts.load('300 40px \"Montserrat\"')")
         page.wait_for_function("document.fonts.check('300 40px \"Montserrat\"')", timeout=20000)
         seed, info = find_seed(page, mode, opts, tries=8 if mode == "overflow" else 40)
@@ -308,9 +344,10 @@ def main():
             # le teaser montre l'explosion finale
             # explosion à dur - 3,8 s : l'extrait s'arrête une image avant
             teaser_at = round(float(info["dur"]) - 3.8 - TEASER_LEN - 2 / FPS, 3)
-        opts["teaserAt"] = teaser_at
+        if USE_TEASER:
+            opts["teaserAt"] = teaser_at
         dur = render(page, mode, seed, opts, mp4, hue)
-        if teaser_at + TEASER_LEN < dur - 1:
+        if USE_TEASER and teaser_at + TEASER_LEN < dur - 1:
             add_teaser(page, mp4, teaser_at, BURST_TEASERS if mode in BURST_MODES else None, dur)
             dur += TEASER_LEN
         files = {}

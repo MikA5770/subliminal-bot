@@ -164,6 +164,27 @@ MODES = {
         "tags": ["#satisfying", "#oddlysatisfying", "#asmr", "#hypnotic"],
         "hue": False, "min": 24, "max": 80,
     },
+    "fill": {
+        "series": "Fill", "keyword": "Multiplying balls fill a shape (wait for the mosaic wave!)",
+        "hooks": ["1 bounce = 2 balls. Wait for 100%"],
+        "question": "What shape should we fill next? 👇",
+        "tags": ["#satisfying", "#physics", "#simulation", "#oddlysatisfying"],
+        "hue": False, "min": 10, "max": 26,
+    },
+    "flagwar": {
+        "series": "Flag Battle", "keyword": "Country flags battle",
+        "hooks": ["Comment your country. Last one standing wins"],
+        "question": "Was your country in it? Comment it 👇",
+        "tags": ["#countryballs", "#flags", "#satisfying", "#simulation"],
+        "hue": False, "min": 16, "max": 62,
+    },
+    "clubwar": {
+        "series": "Club Battle", "keyword": "Football clubs battle",
+        "hooks": ["Comment your club. Last one standing wins"],
+        "question": "Which club do you support? Comment it 👇",
+        "tags": ["#football", "#soccer", "#satisfying", "#simulation"],
+        "hue": False, "min": 16, "max": 62,
+    },
     "oval": {
         "series": "Oval", "keyword": "Satisfying bouncing balls multiply through the hole in the oval",
         "hooks": ["Every ball through the hole becomes 2", "1 ball. 1 hole. Can the oval hold them?", "Guess how many before the oval breaks"],
@@ -224,10 +245,14 @@ def interesting(mode, info):
     if mode in ("oval", "portal"):
         # Ovale qui casse vite : la vidéo reste nerveuse
         return 10 - d / 10 if info["state"] == "break" and info["n"] >= 1000 else None
+    if mode == "fill":
+        return 8 if info["state"] == "done" else None
+    if mode in ("flagwar", "clubwar"):
+        return 8 if info["state"] == "win" else None
     if mode in ("press", "stamps", "twin", "blender", "hunters", "spinners", "chompers"):
         return 8 if info["state"] == "full" and info["n"] >= 180 else None
     if mode == "grinder":
-        return 8 if info["state"] == "full" and info["n"] >= 450 else None
+        return 8 if info["state"] == "full" and info["n"] >= 200 else None
     if mode == "crusher":
         # Pas d'égalité : la couleur gagnante affichée doit être indiscutable
         if info["state"] != "full" or info["n"] < 250 or info["gap"] < 2:
@@ -271,6 +296,9 @@ MODE_TAGS = {
     "bricks": ["#brickbreaker", "#bouncingball", "#breakout", "#ballescape", "#walls"],
     "split": ["#physics", "#breaking", "#guessthenumber", "#simulation", "#fractal"],
     "overflow": ["#ballmultiply", "#exponential", "#1ball", "#chaos", "#guessthenumber"],
+    "fill": ["#mosaic", "#asmr", "#duplication", "#physics", "#brainrelax"],
+    "flagwar": ["#countries", "#worldcup", "#flags", "#battle", "#simulation"],
+    "clubwar": ["#football", "#ucl", "#soccer", "#battle", "#simulation"],
     "stamps": ["#hydraulicpress", "#crusher", "#duplication", "#physics", "#asmr"],
     "twin": ["#hydraulicpress", "#crusher", "#explosion", "#physics", "#asmr"],
     "blender": ["#blender", "#crusher", "#duplication", "#physics", "#asmr"],
