@@ -162,11 +162,21 @@ def platform_version(page, src, handle, dst, plat):
         png.write_bytes(base64.b64decode(page.evaluate("t=>__exp.handlePng(t)", handle).split(",")[1]))
         inputs += ["-loop", "1", "-i", str(png)]
         wx, wy = round((l + r) / 2 - 540), round((t + b) / 2 - 1010)
-        filt += f";[3]format=rgba[w];[b][w]overlay={wx}:{wy}:shortest=1[o]"
+        filt += f";[3]format=rgba[w];[b][w]overlay={wx}:{wy}:shortest=1[o0]"
     else:
-        filt += ";[b]null[o]"
-    subprocess.run(inputs + ["-filter_complex", filt, "-map", "[o]", "-map", "0:a?", "-c:v", "libx264", "-preset", "veryfast",
-                             "-crf", "19", "-pix_fmt", "yuv420p", "-c:a", "copy", "-shortest", "-movflags", "+faststart", str(dst)], check=True)
+        filt += ";[b]null[o0]"
+    # TikTok et Instagram repassent la vidéo à 30 i/s en sautant des images (saccades) : on livre nous-mêmes du 30 i/s,
+    # chaque image fusionnant 2 images du rendu à 60 i/s (léger flou de bouger, mouvement plus doux). YouTube garde le 60 i/s.
+    out_fps = FPS if plat == "youtube" else 30
+    filt += f";[o0]tmix=frames=2:weights='1 1',fps={out_fps}[o]" if out_fps != FPS else ";[o0]null[o]"
+    gop = max(1, out_fps // 2)
+    subprocess.run(inputs + ["-filter_complex", filt, "-map", "[o]", "-map", "0:a?",
+                             # réglages recommandés par Instagram : profil High, 2 B-frames, GOP fermé = moitié des i/s, débit élevé
+                             "-c:v", "libx264", "-preset", "medium", "-crf", "15", "-profile:v", "high", "-bf", "2",
+                             "-g", str(gop), "-keyint_min", str(gop), "-sc_threshold", "0", "-flags", "+cgop",
+                             "-maxrate", "16M", "-bufsize", "32M", "-pix_fmt", "yuv420p", "-r", str(out_fps),
+                             "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
+                             "-shortest", "-movflags", "+faststart", str(dst)], check=True)
     if png:
         png.unlink()
     mask.unlink()
@@ -191,7 +201,7 @@ def fit_size(mp4, dur):
         subprocess.run([FFMPEG, "-loglevel", "error", "-y", "-i", str(mp4), "-map", "0:v", "-map", "0:a?",
                         "-c:v", "libx264", "-preset", "medium", "-crf", "19",
                         "-maxrate", f"{kbps}k", "-bufsize", f"{kbps * 2}k", "-pix_fmt", "yuv420p",
-                        "-c:a", "copy", "-movflags", "+faststart", str(tmp)], check=True)
+                        "-c:a", "copy", "-g", "15", "-bf", "2", "-flags", "+cgop", "-movflags", "+faststart", str(tmp)], check=True)
         if tmp.stat().st_size <= MAX_BYTES:
             print(f"Compression : {mp4.name} {size / 2**20:.1f} Mo -> {tmp.stat().st_size / 2**20:.1f} Mo (plafond {kbps} kb/s)")
             tmp.replace(mp4)

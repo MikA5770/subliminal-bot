@@ -27,7 +27,7 @@ concurrency:
 jobs:
   video:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       PUBLISH: ${{ inputs.envoi != 'test' }}
       DRAFT: ${{ inputs.envoi == 'publier' && '0' || '1' }}
